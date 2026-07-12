@@ -177,14 +177,10 @@
                         <i data-feather="settings"></i> إعدادات
                     </button>
 
-                    <!-- Firebase Controls -->
+                    <!-- Cloud Status Indicator (Auto-Sync) -->
                     <div class="flex items-center gap-2 mr-2 border-r pr-2 border-gray-300">
                         <span id="cloudStatus"
                             class="text-xs font-medium text-gray-500 hidden transition-colors duration-300"></span>
-                        <button id="btnSaveCloud"
-                            class="bg-orange-500 hover:bg-orange-600 text-white px-3 py-2 rounded-lg transition-btn flex items-center gap-1 text-sm">
-                            <i data-feather="cloud"></i> مزامنة سحابية
-                        </button>
                     </div>
                 </div>
             </header>
@@ -969,21 +965,47 @@
                 };
             }
 
-            // Firebase Functions
-            function saveToFirebase(isAuto = false) {
-                const btn = document.getElementById('btnSaveCloud');
-                const originalText = btn.innerHTML;
+            // Firebase Functions - Auto Save Only
+            function saveToFirebase() {
+                updateCloudStatus('saving');
 
-                if (!isAuto) {
-                    btn.innerHTML = `<i data-feather="loader" class="animate-spin"></i> جاري الحفظ...`;
-                    feather.replace();
-                    btn.disabled = true;
-                } else {
-                    updateCloudStatus('saving');
+                // إزالة الصور (base64) من البيانات قبل الرفع للسحابة لتفادي تجاوز الحد الأقصى للحجم (1MB)
+                function stripImagesFromAcademicData(rawData) {
+                    if (!rawData || typeof rawData !== 'object') return rawData;
+                    const stripped = {};
+                    for (const year in rawData) {
+                        stripped[year] = { ...rawData[year] };
+                        // استبدال الصور بمصفوفة فارغة - تبقى الصور محلياً فقط
+                        stripped[year].reportImagesByGender = { 'ذكر': [], 'أنثى': [] };
+                        // إزالة صور الطلاب الفردية من studentReports إن وُجدت
+                        if (stripped[year].studentReports) {
+                            const cleanReports = {};
+                            for (const sid in stripped[year].studentReports) {
+                                const rep = { ...stripped[year].studentReports[sid] };
+                                if (rep.photo) delete rep.photo;
+                                cleanReports[sid] = rep;
+                            }
+                            stripped[year].studentReports = cleanReports;
+                        }
+                        // إزالة صور الطلاب من قائمة students
+                        if (stripped[year].students) {
+                            stripped[year].students = stripped[year].students.map(s => {
+                                const clean = { ...s };
+                                if (clean.photo) delete clean.photo;
+                                if (clean.info && clean.info['الصورة']) {
+                                    clean.info = { ...clean.info };
+                                    delete clean.info['الصورة'];
+                                }
+                                return clean;
+                            });
+                        }
+                    }
+                    return stripped;
                 }
 
+                const rawAcademicData = JSON.parse(localStorage.getItem("academicData") || "{}");
                 const dataToSave = {
-                    academicData: JSON.parse(localStorage.getItem("academicData") || "{}"),
+                    academicData: stripImagesFromAcademicData(rawAcademicData),
                     academicYears: JSON.parse(localStorage.getItem("academicYears") || "[]"),
                     studentFields: JSON.parse(localStorage.getItem("studentFields") || "[]"),
                     currentAcademicYear: localStorage.getItem("currentAcademicYear"),
@@ -992,39 +1014,23 @@
                     lastUpdatedBy: instanceId
                 };
 
-                // Save to Firestore (New primary storage)
-                const firestoreSave = saveUserData(dataToSave);
+                // Save to Firestore (primary storage)
+                saveUserData(dataToSave);
 
-                // Optional: Still save to RTDB for backward compatibility/backup
+                // Save to RTDB for backup
                 const targetDocId = currentUser ? currentUser.uid : cloudUserId;
                 db.ref('backup/' + targetDocId).set(dataToSave)
                     .then(() => {
-                        if (!isAuto) {
-                            alert("تم الحفظ في السحابة بنجاح! ✅");
-                            btn.innerHTML = originalText;
-                            btn.disabled = false;
-                        } else {
-                            updateCloudStatus('saved');
-                        }
-                        feather.replace();
+                        updateCloudStatus('saved');
                     })
                     .catch((error) => {
-                        console.error("Firebase Save Error:", error);
-                        if (!isAuto) {
-                            alert("حدث خطأ أثناء الحفظ:\n" + error.message + "\n\nتأكد من أن 'Rules' في الفايربيس مسموحة (write: true).");
-                            btn.innerHTML = originalText;
-                            btn.disabled = false;
-                        } else {
-                            updateCloudStatus('error');
-                            // Show toast or log for auto-save errors
-                            console.log("Auto-save failed: " + error.message);
-                        }
-                        feather.replace();
+                        console.error("Firebase Auto-Save Error:", error);
+                        updateCloudStatus('error', error.message);
                     });
             }
 
-            // Debounced Auto-Save (Waits 2 seconds after last call to run)
-            const autoSaveToFirebase = debounce(() => saveToFirebase(true), 2000);
+            // Debounced Auto-Save (Waits 2 seconds after last change to run)
+            const autoSaveToFirebase = debounce(() => saveToFirebase(), 2000);
 
             let lastCloudError = "";
 
@@ -1065,7 +1071,7 @@
             }
 
             // Attach Events
-            document.getElementById('btnSaveCloud').addEventListener('click', () => saveToFirebase(false));
+            // (Manual cloud save button removed - auto-save handles all syncing)
 
             // --- نظام السنوات الدراسية ---
             let academicYears = JSON.parse(localStorage.getItem("academicYears") || "[]");
