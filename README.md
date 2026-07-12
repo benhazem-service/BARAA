@@ -1,3 +1,4 @@
+<!DOCTYPE html>
 <html lang="ar" dir="rtl">
 
 <head>
@@ -144,17 +145,149 @@
         .images-locked .delete-image-btn {
             display: none !important;
         }
+
+        /* === نظام تسجيل الدخول === */
+        #loginOverlay {
+            position: fixed; inset: 0; z-index: 9999;
+            background: linear-gradient(135deg, #1e1b4b 0%, #312e81 40%, #4338ca 100%);
+            display: flex; align-items: center; justify-content: center;
+        }
+        #loginOverlay.hidden { display: none; }
+
+        .login-card {
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.2);
+            backdrop-filter: blur(20px);
+            border-radius: 1.5rem;
+            padding: 2.5rem;
+            width: 100%; max-width: 400px;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.4);
+        }
+        .login-input {
+            width: 100%; padding: 0.8rem 1rem;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.25);
+            border-radius: 0.75rem; color: white;
+            font-size: 1rem; font-family: 'Tajawal', sans-serif;
+            direction: ltr; text-align: left;
+            transition: border 0.2s;
+        }
+        .login-input:focus { outline: none; border-color: #a5b4fc; background: rgba(255,255,255,0.15); }
+        .login-input::placeholder { color: rgba(255,255,255,0.5); }
+        .login-btn {
+            width: 100%; padding: 0.85rem;
+            background: linear-gradient(90deg, #6366f1, #8b5cf6);
+            color: white; border: none; border-radius: 0.75rem;
+            font-size: 1.05rem; font-weight: 700; cursor: pointer;
+            font-family: 'Tajawal', sans-serif;
+            transition: transform 0.15s, box-shadow 0.15s;
+        }
+        .login-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(99,102,241,0.5); }
+        .login-error { color: #fca5a5; font-size: 0.9rem; text-align: center; min-height: 1.2rem; }
+
+        /* === لوحة الإدارة === */
+        #adminModal {
+            position: fixed; inset: 0; z-index: 1000;
+            background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center;
+            padding: 1rem;
+        }
+        #adminModal.hidden { display: none; }
+        .admin-modal-content {
+            background: white; border-radius: 1.2rem;
+            width: 100%; max-width: 750px; max-height: 90vh;
+            overflow-y: auto; box-shadow: 0 25px 50px rgba(0,0,0,0.35);
+        }
     </style>
 </head>
 
 <body class="bg-gray-100 min-h-screen rtl">
+
+    <!-- ===== شاشة تسجيل الدخول ===== -->
+    <div id="loginOverlay">
+        <div class="login-card">
+            <div class="text-center mb-7">
+                <div class="text-5xl mb-3">📚</div>
+                <h2 class="text-2xl font-bold text-white">النظام التعليمي</h2>
+                <p class="text-indigo-200 text-sm mt-1">أدخل بيانات الدخول للمتابعة</p>
+            </div>
+            <div class="flex flex-col gap-4">
+                <div>
+                    <label class="text-indigo-200 text-sm block mb-1">رقم الهاتف</label>
+                    <input id="loginPhone" type="tel" placeholder="0600000000" class="login-input" autocomplete="username">
+                </div>
+                <div>
+                    <label class="text-indigo-200 text-sm block mb-1">كلمة السر</label>
+                    <input id="loginPassword" type="password" placeholder="••••••••" class="login-input" autocomplete="current-password">
+                </div>
+                <p id="loginError" class="login-error"></p>
+                <button id="loginBtn" class="login-btn">
+                    <span id="loginBtnText">تسجيل الدخول</span>
+                </button>
+            </div>
+            <p class="text-center text-indigo-300 text-xs mt-6 opacity-60">النظام التعليمي © 2026</p>
+        </div>
+    </div>
+
+    <!-- ===== مودال إدارة الحسابات (للأدمن) ===== -->
+    <div id="adminModal" class="hidden">
+        <div class="admin-modal-content">
+            <div class="bg-gradient-to-l from-indigo-600 to-purple-700 p-5 rounded-t-xl flex justify-between items-center">
+                <h2 class="text-white text-xl font-bold">⚙️ لوحة إدارة الحسابات</h2>
+                <button onclick="document.getElementById('adminModal').classList.add('hidden')"
+                    class="text-white hover:text-indigo-200 text-2xl font-bold leading-none">&times;</button>
+            </div>
+            <div class="p-5">
+                <!-- نموذج إضافة / تعديل حساب -->
+                <div class="bg-indigo-50 rounded-xl p-4 mb-5">
+                    <h3 id="accountFormTitle" class="font-bold text-indigo-700 mb-3">➕ إضافة حساب جديد</h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="text-sm text-gray-600 block mb-1">الاسم الكامل</label>
+                            <input id="accName" type="text" placeholder="مثال: محمد أحمد"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-400 text-sm">
+                        </div>
+                        <div>
+                            <label class="text-sm text-gray-600 block mb-1">رقم الهاتف (معرّف الدخول)</label>
+                            <input id="accPhone" type="tel" placeholder="0600000000" dir="ltr"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-400 text-sm">
+                        </div>
+                        <div>
+                            <label class="text-sm text-gray-600 block mb-1">كلمة السر</label>
+                            <input id="accPassword" type="text" placeholder="اتركه فارغاً لعدم التغيير"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-400 text-sm">
+                        </div>
+                        <div>
+                            <label class="text-sm text-gray-600 block mb-1">المستويات المسموح بها</label>
+                            <div id="accLevelsCheckboxes" class="flex flex-wrap gap-2 p-2 border border-gray-300 rounded-lg bg-white min-h-10">
+                                <span class="text-gray-400 text-xs">سيتم تحميل المستويات...</span>
+                            </div>
+                        </div>
+                    </div>
+                    <input id="accEditingPhone" type="hidden" value="">
+                    <div class="flex gap-2 mt-3">
+                        <button id="accSaveBtn" onclick="saveAccount()"
+                            class="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2 rounded-lg text-sm font-bold">💾 حفظ</button>
+                        <button id="accCancelBtn" onclick="cancelAccountEdit()" class="hidden bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm">إلغاء</button>
+                    </div>
+                </div>
+
+                <!-- قائمة الحسابات -->
+                <h3 class="font-bold text-gray-700 mb-2">📋 قائمة الحسابات</h3>
+                <div id="accountsList" class="space-y-2">
+                    <p class="text-gray-400 text-sm text-center py-4">جاري التحميل...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="container mx-auto p-6 max-w-5xl">
 
             <!-- Header -->
             <header class="flex justify-between items-center mb-8">
                 <h1 class="text-2xl font-bold text-indigo-700">📚 النظام التعليمي</h1>
                 <div class="flex gap-2 items-center">
-                    <div class="flex items-center gap-2">
+                    <!-- محدد السنة الدراسية (للمدير فقط) -->
+                    <div id="yearSelectorBox" class="flex items-center gap-2">
                         <label class="text-sm font-medium">السنة الدراسية:</label>
                         <button id="prevYearBtn" title="السنة السابقة"
                             class="px-2 py-2 rounded-lg bg-gray-200 hover:bg-gray-300 border border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed">◀</button>
@@ -180,6 +313,15 @@
                     <div class="flex items-center gap-2 mr-2 border-r pr-2 border-gray-300">
                         <span id="cloudStatus"
                             class="text-xs font-medium text-gray-500 hidden transition-colors duration-300"></span>
+                    </div>
+
+                    <!-- معلومات المستخدم + تسجيل الخروج -->
+                    <div class="flex items-center gap-2 border-r pr-2 border-gray-300">
+                        <span id="headerUserName" class="text-sm font-medium text-indigo-700 hidden"></span>
+                        <button id="logoutBtn" onclick="logoutUser()"
+                            class="hidden bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 px-3 py-1.5 rounded-lg text-sm flex items-center gap-1 transition-btn">
+                            <i data-feather="log-out" class="w-4 h-4"></i> خروج
+                        </button>
                     </div>
                 </div>
             </header>
@@ -211,6 +353,14 @@
                     <div id="rankingCard" class="bg-amber-100 p-4 rounded-lg text-center cursor-pointer transition-btn">
                         <p class="text-amber-700 font-bold text-2xl flex justify-center items-center gap-2">ترتيب المراكز حسب المستوى <i data-feather="award" class="w-8 h-8"></i></p>
                         <p>عرض ترتيب التلاميذ الأوائل لكل مستوى</p>
+                    </div>
+                    <!-- بطاقة الإدارة (للأدمن فقط) -->
+                    <div id="adminCard" onclick="openAdminPanel()"
+                        class="hidden bg-gradient-to-br from-indigo-100 to-purple-100 p-4 rounded-lg text-center cursor-pointer transition-btn border-2 border-indigo-200 hover:border-indigo-400">
+                        <p class="text-indigo-700 font-bold text-xl flex justify-center items-center gap-2">
+                            <i data-feather="users" class="w-7 h-7"></i> إدارة الحسابات
+                        </p>
+                        <p class="text-indigo-600 text-sm">إنشاء وتعديل حسابات المستخدمين</p>
                     </div>
                 </div>
             </section>
@@ -402,13 +552,13 @@
                     </button>
                 </div>
 
-                <div class="flex gap-3 mb-6 flex-wrap">
+                <div class="flex gap-3 mb-6 flex-wrap" id="settingsTabsBar">
                     <button class="tab-btn tab-active px-4 py-2 rounded-lg font-medium border border-gray-600"
-                        data-target="generalSettingsTab">⚙️ إعدادات عامة</button>
+                        data-target="generalSettingsTab" data-admin-only="true">⚙️ إعدادات عامة</button>
                     <button class="tab-btn px-4 py-2 rounded-lg font-medium border border-purple-600"
-                        data-target="yearsTab">📅 السنوات الدراسية</button>
+                        data-target="yearsTab" data-admin-only="true">📅 السنوات الدراسية</button>
                     <button class="tab-btn px-4 py-2 rounded-lg font-medium border border-indigo-600"
-                        data-target="deptsTab">🏫 الأقسام</button>
+                        data-target="deptsTab" data-admin-only="true">🏫 الأقسام</button>
                     <button class="tab-btn px-4 py-2 rounded-lg font-medium border border-green-600"
                         data-target="studentsTab">👨‍🎓 التلاميذ</button>
                     <button class="tab-btn px-4 py-2 rounded-lg font-medium border border-amber-600"
@@ -834,6 +984,323 @@
 
             let currentUser = null;
 
+            // ============================================================
+            // === نظام المصادقة المخصص (رقم هاتف + كلمة سر) ===
+            // ============================================================
+
+            const ADMIN_PHONE    = '0662065072';
+            const ADMIN_PASS_RAW = 'Benhazem@1988';
+
+            // دالة hash بسيطة لتشفير كلمة السر
+            function simpleHash(str) {
+                let hash = 0;
+                for (let i = 0; i < str.length; i++) {
+                    const char = str.charCodeAt(i);
+                    hash = ((hash << 5) - hash) + char;
+                    hash = hash & hash;
+                }
+                return 'h' + Math.abs(hash).toString(36);
+            }
+
+            // الجلسة الحالية
+            let currentSession = null;
+
+            function loadSession() {
+                try {
+                    const s = localStorage.getItem('appSession');
+                    return s ? JSON.parse(s) : null;
+                } catch { return null; }
+            }
+
+            function saveSession(session) {
+                localStorage.setItem('appSession', JSON.stringify(session));
+            }
+
+            function clearSession() {
+                localStorage.removeItem('appSession');
+            }
+
+            // تهيئة نظام المصادقة عند تحميل الصفحة
+            async function initAuth() {
+                const session = loadSession();
+                if (session && session.phone) {
+                    currentSession = session;
+                    onLoginSuccess(session);
+                } else {
+                    showLoginScreen();
+                }
+            }
+
+            function showLoginScreen() {
+                document.getElementById('loginOverlay').classList.remove('hidden');
+            }
+
+            function hideLoginScreen() {
+                document.getElementById('loginOverlay').classList.add('hidden');
+            }
+
+            async function loginUser() {
+                const phone    = document.getElementById('loginPhone').value.trim();
+                const password = document.getElementById('loginPassword').value;
+                const errEl    = document.getElementById('loginError');
+                const btnText  = document.getElementById('loginBtnText');
+
+                errEl.textContent = '';
+                if (!phone || !password) {
+                    errEl.textContent = 'يرجى إدخال رقم الهاتف وكلمة السر.';
+                    return;
+                }
+
+                btnText.textContent = 'جاري التحقق...';
+                document.getElementById('loginBtn').disabled = true;
+
+                try {
+                    // التحقق من حساب الأدمن المضمّن
+                    if (phone === ADMIN_PHONE && password === ADMIN_PASS_RAW) {
+                        const session = { phone: ADMIN_PHONE, name: 'المدير', isAdmin: true, levels: [] };
+                        currentSession = session;
+                        saveSession(session);
+                        onLoginSuccess(session);
+                        return;
+                    }
+
+                    // التحقق من حسابات المستخدمين في Firestore
+                    const doc = await fs.collection('accounts').doc(phone).get();
+                    if (!doc.exists) {
+                        errEl.textContent = '❌ رقم الهاتف غير موجود.';
+                        return;
+                    }
+                    const data = doc.data();
+                    const inputHash = simpleHash(password);
+                    if (data.passwordHash !== inputHash) {
+                        errEl.textContent = '❌ كلمة السر غير صحيحة.';
+                        return;
+                    }
+
+                    const session = {
+                        phone: phone,
+                        name: data.name || phone,
+                        isAdmin: false,
+                        levels: data.levels || []
+                    };
+                    currentSession = session;
+                    saveSession(session);
+                    onLoginSuccess(session);
+
+                } catch (e) {
+                    console.error('Login error:', e);
+                    errEl.textContent = '❌ خطأ في الاتصال. تأكد من إعدادات Firebase.';
+                } finally {
+                    btnText.textContent = 'تسجيل الدخول';
+                    document.getElementById('loginBtn').disabled = false;
+                }
+            }
+
+            function onLoginSuccess(session) {
+                hideLoginScreen();
+
+                // عرض اسم المستخدم وزر الخروج
+                const nameEl    = document.getElementById('headerUserName');
+                const logoutBtn = document.getElementById('logoutBtn');
+                nameEl.textContent = '👤 ' + session.name;
+                nameEl.classList.remove('hidden');
+                logoutBtn.classList.remove('hidden');
+
+                // عرض بطاقة الإدارة للأدمن
+                if (session.isAdmin) {
+                    document.getElementById('adminCard').classList.remove('hidden');
+                } else {
+                    // إخفاء محدد السنة عن المشتركين — يتحكم به المدير
+                    const yearBox = document.getElementById('yearSelectorBox');
+                    if (yearBox) yearBox.classList.add('hidden');
+                    // تحميل بيانات المدير (السنة والأقسام) من Firestore
+                    loadAdminSharedData();
+                }
+
+                // استخدام رقم الهاتف كـ cloudUserId
+                cloudUserId = session.phone;
+                localStorage.setItem('cloudUserId', cloudUserId);
+
+                // بدء المزامنة السحابية
+                startFirestoreSync(cloudUserId);
+                signIn();
+
+                feather.replace();
+            }
+
+            // تحميل بيانات المدير المشتركة (السنة الحالية والأقسام) للمشتركين
+            async function loadAdminSharedData() {
+                try {
+                    const adminDoc = await fs.collection('users').doc(ADMIN_PHONE).get();
+                    if (adminDoc.exists) {
+                        const data = adminDoc.data();
+                        // استخدام السنة الدراسية التي حددها المدير
+                        if (data.currentAcademicYear) {
+                            localStorage.setItem('currentAcademicYear', data.currentAcademicYear);
+                            currentAcademicYear = data.currentAcademicYear;
+                        }
+                        // استخدام بيانات السنة من بيانات المدير (لأجل الأقسام)
+                        if (data.academicData && data.currentAcademicYear) {
+                            const adminYearData = data.academicData[data.currentAcademicYear] || {};
+                            // تحديث الأقسام محليا للسنة الحالية فقط
+                            if (!academicData[currentAcademicYear]) academicData[currentAcademicYear] = {};
+                            let adminDepts = adminYearData.departments || [];
+
+                            // فلترة الأقسام حسب المستويات المخصصة للمشترك
+                            const userLevels = currentSession && currentSession.levels ? currentSession.levels : [];
+                            if (userLevels.length > 0) {
+                                adminDepts = adminDepts.filter(d => {
+                                    const dName = typeof d === 'string' ? d : (d.name || '');
+                                    return userLevels.includes(dName);
+                                });
+                            }
+
+                            academicData[currentAcademicYear].departments = adminDepts;
+                            departments = adminDepts;
+                            // تحديث واجهة المستخدم
+                            refreshUI();
+                            renderHomeStudents();
+                            console.log('تم تحميل بيانات المدير: ', departments.length, 'قسم');
+                        }
+                    } else {
+                        console.log('لا توجد بيانات مدير بعد.');
+                    }
+                } catch (e) {
+                    console.error('خطأ تحميل بيانات المدير:', e);
+                }
+            }
+
+            function logoutUser() {
+                if (!confirm('هل تريد تسجيل الخروج؟')) return;
+                clearSession();
+                currentSession = null;
+                if (fsUnsubscribe) fsUnsubscribe();
+                location.reload();
+            }
+
+            // ============================================================
+            // === إدارة الحسابات (للأدمن فقط) ===
+            // ============================================================
+
+            async function openAdminPanel() {
+                if (!currentSession || !currentSession.isAdmin) return;
+                document.getElementById('adminModal').classList.remove('hidden');
+                renderAccLevelsCheckboxes();
+                await loadAccountsList();
+                feather.replace();
+            }
+
+            function renderAccLevelsCheckboxes(selectedLevels = []) {
+                const container = document.getElementById('accLevelsCheckboxes');
+                if (!departments || departments.length === 0) {
+                    container.innerHTML = '<span class="text-gray-400 text-xs">لا توجد مستويات معرّفة في الإعدادات</span>';
+                    return;
+                }
+                container.innerHTML = departments.map(dept => {
+                    const deptName = typeof dept === 'string' ? dept : (dept.name || dept.id);
+                    const checked = selectedLevels.includes(deptName) ? 'checked' : '';
+                    return `<label class="flex items-center gap-1 text-sm bg-indigo-50 px-2 py-1 rounded cursor-pointer">
+                        <input type="checkbox" class="acc-level-cb" value="${deptName}" ${checked}>
+                        ${deptName}
+                    </label>`;
+                }).join('');
+            }
+
+            async function loadAccountsList() {
+                const listEl = document.getElementById('accountsList');
+                listEl.innerHTML = '<p class="text-gray-400 text-sm text-center py-4">جاري التحميل...</p>';
+                try {
+                    const snap = await fs.collection('accounts').get();
+                    if (snap.empty) {
+                        listEl.innerHTML = '<p class="text-gray-400 text-sm text-center py-4">لا توجد حسابات بعد.</p>';
+                        return;
+                    }
+                    listEl.innerHTML = snap.docs.map(doc => {
+                        const d = doc.data();
+                        const levels = (d.levels || []).join('، ') || 'جميع المستويات';
+                        return `<div class="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-lg px-4 py-3">
+                            <div>
+                                <p class="font-bold text-gray-800">${d.name || '—'}</p>
+                                <p class="text-xs text-gray-500 dir-ltr">${doc.id}</p>
+                                <p class="text-xs text-indigo-600 mt-0.5">المستويات: ${levels}</p>
+                            </div>
+                            <div class="flex gap-2">
+                                <button onclick="editAccount('${doc.id}')"
+                                    class="bg-indigo-100 hover:bg-indigo-200 text-indigo-700 px-3 py-1 rounded-lg text-xs">✏️ تعديل</button>
+                                <button onclick="deleteAccount('${doc.id}')"
+                                    class="bg-red-100 hover:bg-red-200 text-red-700 px-3 py-1 rounded-lg text-xs">🗑️ حذف</button>
+                            </div>
+                        </div>`;
+                    }).join('');
+                } catch (e) {
+                    listEl.innerHTML = '<p class="text-red-500 text-sm text-center py-4">خطأ في تحميل البيانات: ' + e.message + '</p>';
+                }
+            }
+
+            async function editAccount(phone) {
+                const doc = await fs.collection('accounts').doc(phone).get();
+                if (!doc.exists) return;
+                const d = doc.data();
+                document.getElementById('accountFormTitle').textContent = '✏️ تعديل الحساب';
+                document.getElementById('accName').value = d.name || '';
+                document.getElementById('accPhone').value = phone;
+                document.getElementById('accPhone').readOnly = true;
+                document.getElementById('accPassword').value = '';
+                document.getElementById('accEditingPhone').value = phone;
+                document.getElementById('accCancelBtn').classList.remove('hidden');
+                renderAccLevelsCheckboxes(d.levels || []);
+            }
+
+            function cancelAccountEdit() {
+                document.getElementById('accountFormTitle').textContent = '➕ إضافة حساب جديد';
+                document.getElementById('accName').value = '';
+                document.getElementById('accPhone').value = '';
+                document.getElementById('accPhone').readOnly = false;
+                document.getElementById('accPassword').value = '';
+                document.getElementById('accEditingPhone').value = '';
+                document.getElementById('accCancelBtn').classList.add('hidden');
+                renderAccLevelsCheckboxes([]);
+            }
+
+            async function saveAccount() {
+                const name     = document.getElementById('accName').value.trim();
+                const phone    = document.getElementById('accPhone').value.trim();
+                const password = document.getElementById('accPassword').value;
+                const editing  = document.getElementById('accEditingPhone').value;
+                const selectedLevels = Array.from(document.querySelectorAll('.acc-level-cb:checked')).map(cb => cb.value);
+
+                if (!name || !phone) { alert('يرجى إدخال الاسم ورقم الهاتف.'); return; }
+                if (!editing && !password) { alert('يرجى إدخال كلمة السر للحساب الجديد.'); return; }
+
+                const accData = { name, levels: selectedLevels };
+                if (password) accData.passwordHash = simpleHash(password);
+
+                try {
+                    await fs.collection('accounts').doc(phone).set(accData, { merge: true });
+                    alert(editing ? '✅ تم تعديل الحساب بنجاح!' : '✅ تم إنشاء الحساب بنجاح!');
+                    cancelAccountEdit();
+                    await loadAccountsList();
+                } catch (e) {
+                    alert('❌ خطأ: ' + e.message);
+                }
+            }
+
+            async function deleteAccount(phone) {
+                if (!confirm('هل تريد حذف حساب ' + phone + '؟ لن يتم حذف بياناته.')) return;
+                try {
+                    await fs.collection('accounts').doc(phone).delete();
+                    await loadAccountsList();
+                } catch (e) {
+                    alert('❌ خطأ: ' + e.message);
+                }
+            }
+
+            // ربط زر الدخول
+            document.getElementById('loginBtn').addEventListener('click', loginUser);
+            document.getElementById('loginPassword').addEventListener('keydown', e => {
+                if (e.key === 'Enter') loginUser();
+            });
+
             // --- Authentication Logic (Anonymous) ---
             async function signIn() {
                 if (window.location.protocol === 'file:') {
@@ -1258,6 +1725,29 @@
             document.getElementById("openSettings").onclick = () => {
                 homePage.classList.add("hidden");
                 settingsPage.classList.remove("hidden");
+
+                // إخفاء/إظهار التبويبات بناءً على صلاحيات المستخدم
+                const isAdmin = currentSession && currentSession.isAdmin;
+                const allTabBtns = document.querySelectorAll('#settingsTabsBar .tab-btn');
+                let firstVisible = null;
+                allTabBtns.forEach(btn => {
+                    const adminOnly = btn.dataset.adminOnly === 'true';
+                    if (adminOnly && !isAdmin) {
+                        btn.classList.add('hidden');
+                    } else {
+                        btn.classList.remove('hidden');
+                        if (!firstVisible) firstVisible = btn;
+                    }
+                });
+                // تفعيل أول تبويب مرئي
+                if (firstVisible) {
+                    allTabBtns.forEach(b => b.classList.remove('tab-active'));
+                    firstVisible.classList.add('tab-active');
+                    document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+                    const targetTab = document.getElementById(firstVisible.dataset.target);
+                    if (targetTab) targetTab.classList.remove('hidden');
+                    if (firstVisible.dataset.target === 'studentsTab') renderStudents();
+                }
             };
             document.getElementById("backHome").onclick = () => {
                 settingsPage.classList.add("hidden");
@@ -3660,6 +4150,10 @@
                 };
                 fileInput.click();
             });
+
+            // تهيئة نظام المصادقة عند تحميل الصفحة
+            initAuth();
+
         </script>
     </body>
 
