@@ -304,13 +304,44 @@
         </div>
     </div>
 
+    <!-- ===== مودال التصدير ===== -->
+    <div id="exportModal" class="hidden fixed inset-0 z-[1000] bg-black bg-opacity-60 flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl w-full max-w-sm overflow-hidden shadow-2xl transform transition-all">
+            <div class="bg-indigo-600 p-4 flex justify-between items-center">
+                <h2 class="text-white text-lg font-bold">💾 خيارات التصدير</h2>
+                <button onclick="document.getElementById('exportModal').classList.add('hidden')" class="text-white hover:text-indigo-200 text-2xl leading-none">&times;</button>
+            </div>
+            <div class="p-5 flex flex-col gap-3">
+                <button onclick="exportAll()" class="bg-indigo-100 hover:bg-indigo-200 text-indigo-800 font-bold py-3 rounded-lg w-full transition-colors">📦 تصدير كل البيانات</button>
+                <button onclick="exportImages()" class="bg-teal-100 hover:bg-teal-200 text-teal-800 font-bold py-3 rounded-lg w-full transition-colors">🖼️ تصدير الصور فقط</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== مودال الاستيراد ===== -->
+    <div id="importModal" class="hidden fixed inset-0 z-[1000] bg-black bg-opacity-60 flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl w-full max-w-sm overflow-hidden shadow-2xl transform transition-all">
+            <div class="bg-gray-600 p-4 flex justify-between items-center">
+                <h2 class="text-white text-lg font-bold">📂 خيارات الاستيراد</h2>
+                <button onclick="document.getElementById('importModal').classList.add('hidden')" class="text-white hover:text-gray-200 text-2xl leading-none">&times;</button>
+            </div>
+            <div class="p-5 flex flex-col gap-3">
+                <button onclick="document.getElementById('importAllInput').click()" class="bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-3 rounded-lg w-full transition-colors">📦 استيراد كل البيانات (استبدال)</button>
+                <button onclick="document.getElementById('importImagesInput').click()" class="bg-teal-100 hover:bg-teal-200 text-teal-800 font-bold py-3 rounded-lg w-full transition-colors">🖼️ استيراد الصور فقط (دمج)</button>
+                
+                <input type="file" id="importAllInput" accept=".json" class="hidden" onchange="importAll(event)">
+                <input type="file" id="importImagesInput" accept=".json" class="hidden" onchange="importImages(event)">
+            </div>
+        </div>
+    </div>
+
     <div class="container mx-auto p-6 max-w-5xl">
 
             <!-- Header -->
             <header class="flex justify-between items-center mb-8">
                 <h1 class="text-2xl font-bold text-indigo-700">📚 النظام التعليمي</h1>
                 <div class="flex gap-2 items-center">
-                    <!-- محدد السنة الدراسية (لجميع المستخدمين - كل مشترك يدير سنته الخاصة) -->
+                    <!-- محدد السنة الدراسية (للمدير فقط) -->
                     <div id="yearSelectorBox" class="flex items-center gap-2">
                         <label class="text-sm font-medium">السنة الدراسية:</label>
                         <button id="prevYearBtn" title="السنة السابقة"
@@ -583,9 +614,9 @@
                     <button class="tab-btn tab-active px-4 py-2 rounded-lg font-medium border border-gray-600"
                         data-target="generalSettingsTab" data-admin-only="true">⚙️ إعدادات عامة</button>
                     <button class="tab-btn px-4 py-2 rounded-lg font-medium border border-purple-600"
-                        data-target="yearsTab">📅 السنوات الدراسية</button>
+                        data-target="yearsTab" data-admin-only="true">📅 السنوات الدراسية</button>
                     <button class="tab-btn px-4 py-2 rounded-lg font-medium border border-indigo-600"
-                        data-target="deptsTab">🏫 الأقسام</button>
+                        data-target="deptsTab" data-admin-only="true">🏫 الأقسام</button>
                     <button class="tab-btn px-4 py-2 rounded-lg font-medium border border-green-600"
                         data-target="studentsTab">👨‍🎓 التلاميذ</button>
                     <button class="tab-btn px-4 py-2 rounded-lg font-medium border border-amber-600"
@@ -1045,32 +1076,6 @@
 
             function clearSession() {
                 localStorage.removeItem('appSession');
-                localStorage.removeItem('cloudUserId');
-                localStorage.removeItem('academicData');
-                localStorage.removeItem('academicYears');
-                localStorage.removeItem('currentAcademicYear');
-                localStorage.removeItem('selectedHomeDept');
-                localStorage.removeItem('selectedHomeStudent');
-                localStorage.removeItem('institutionName');
-                
-                // تصفير المتغيرات العامة في الذاكرة لتكون الصفحة فارغة تماماً
-                academicData = {};
-                academicYears = [];
-                currentAcademicYear = null;
-                departments = [];
-                students = [];
-                subjects = [];
-                grades = {};
-                monthlyGrades = {};
-                studentReports = {};
-                reportActivities = ["القرآن الكريم", "القيم والعادات", "اللغة العربية", "الرياضيات", "الأنشطة العلمية"];
-                reportBehaviors = ["المواظبة على الحضور", "السلوك داخل القسم"];
-                reportSessions = ["الدورة الأولى", "الدورة الثانية"];
-                absences = {};
-                scoreObservations = [{ min: 8, max: 10, text: "ممتاز" }, { min: 7, max: 7.99, text: "جيد جدا" }, { min: 6, max: 6.99, text: "حسن" }, { min: 5, max: 5.99, text: "مقبول" }, { min: 0, max: 4.99, text: "يحتاج لمجهود" }];
-                customFinalAverageLabels = [];
-                globalFinalAverageLabel = 'المعدل العام السنوي';
-                selectedHomeStudentId = null;
             }
 
             // تهيئة نظام المصادقة عند تحميل الصفحة
@@ -1110,7 +1115,6 @@
                 try {
                     // التحقق من حساب الأدمن المضمّن
                     if (phone === ADMIN_PHONE && password === ADMIN_PASS_RAW) {
-                        clearSession(); // مسح البيانات القديمة تماماً فوراً قبل الدخول
                         const session = { phone: ADMIN_PHONE, name: 'المدير', isAdmin: true, levels: [] };
                         currentSession = session;
                         saveSession(session);
@@ -1131,7 +1135,6 @@
                         return;
                     }
 
-                    clearSession(); // مسح البيانات القديمة تماماً فوراً قبل الدخول
                     const session = {
                         phone: phone,
                         name: data.name || phone,
@@ -1161,28 +1164,84 @@
                 nameEl.classList.remove('hidden');
                 logoutBtn.classList.remove('hidden');
 
-                // عرض بطاقة إدارة الحسابات للمدير فقط
+                // عرض بطاقة الإدارة للأدمن
                 if (session.isAdmin) {
                     document.getElementById('adminCard').classList.remove('hidden');
+                } else {
+                    // تحميل بيانات المدير (السنة والأقسام) من Firestore
+                    loadAdminSharedData();
                 }
-                // كل مستخدم (admin أو مشترك) يدير بياناته المستقلة تماماً
 
                 // استخدام رقم الهاتف كـ cloudUserId
                 cloudUserId = session.phone;
                 localStorage.setItem('cloudUserId', cloudUserId);
 
-                // بدء المزامنة السحابية (كل مستخدم يمزامن بياناته الخاصة)
+                // بدء المزامنة السحابية
                 startFirestoreSync(cloudUserId);
                 signIn();
 
                 feather.replace();
             }
 
-            // لا توجد مشاركة بيانات بين المستخدمين — كل مستخدم يدير بياناته بشكل مستقل تماماً
-            // هذه الدالة محتفظة توافقاً مع الكود القديم ولكنها لا تستخدم بعد الآن
+            // تحميل بيانات المدير المشتركة (السنة الحالية والأقسام) للمشتركين
             async function loadAdminSharedData() {
-                // معطّلة — كل مستخدم مستقل ببياناته الخاصة
-                return;
+                try {
+                    const adminDoc = await fs.collection('users').doc(ADMIN_PHONE).get();
+                    if (adminDoc.exists) {
+                        const data = adminDoc.data();
+                        // استخدام السنة الدراسية التي حددها المدير
+                        if (data.currentAcademicYear) {
+                            localStorage.setItem('currentAcademicYear', data.currentAcademicYear);
+                            currentAcademicYear = data.currentAcademicYear;
+                        }
+                        
+                        // تحميل قائمة السنوات كاحتياطي إذا لم تكن موجودة في الإعدادات العامة
+                        if (data.academicYears && academicYears.length === 0) {
+                            localStorage.setItem('academicYears', JSON.stringify(data.academicYears));
+                            academicYears = data.academicYears;
+                            
+                            let acData = JSON.parse(localStorage.getItem("academicData") || "{}");
+                            let changedAcData = false;
+                            academicYears.forEach(year => {
+                                if (!acData[year]) {
+                                    acData[year] = { departments: [], students: [], subjects: [], grades: {}, monthlyGrades: {}, studentReports: {}, reportImagesByGender: { 'ذكر': [], 'أنثى': [] } };
+                                    changedAcData = true;
+                                }
+                            });
+                            if (changedAcData) {
+                                localStorage.setItem("academicData", JSON.stringify(acData));
+                                academicData = acData;
+                            }
+                        }
+                        // استخدام بيانات السنة من بيانات المدير (لأجل الأقسام)
+                        if (data.academicData && data.currentAcademicYear) {
+                            const adminYearData = data.academicData[data.currentAcademicYear] || {};
+                            // تحديث الأقسام محليا للسنة الحالية فقط
+                            if (!academicData[currentAcademicYear]) academicData[currentAcademicYear] = {};
+                            let adminDepts = adminYearData.departments || [];
+
+                            // فلترة الأقسام حسب المستويات المخصصة للمشترك
+                            const userLevels = currentSession && currentSession.levels ? currentSession.levels : [];
+                            if (userLevels.length > 0) {
+                                adminDepts = adminDepts.filter(d => {
+                                    const dName = typeof d === 'string' ? d : (d.name || '');
+                                    return userLevels.includes(dName);
+                                });
+                            }
+
+                            academicData[currentAcademicYear].departments = adminDepts;
+                            departments = adminDepts;
+                            // تحديث واجهة المستخدم
+                            refreshUI();
+                            renderHomeStudents();
+                            console.log('تم تحميل بيانات المدير: ', departments.length, 'قسم');
+                        }
+                    } else {
+                        console.log('لا توجد بيانات مدير بعد.');
+                    }
+                } catch (e) {
+                    console.error('خطأ تحميل بيانات المدير:', e);
+                }
             }
 
             function logoutUser() {
@@ -1350,6 +1409,13 @@
                         // Ignore our own updates
                         if (data.lastUpdatedBy === instanceId) return;
 
+                        const localLastUpdated = localStorage.getItem("lastUpdated");
+                        if (localLastUpdated && data.lastUpdated && new Date(localLastUpdated) > new Date(data.lastUpdated)) {
+                            console.log("Local data is newer than cloud data. Pushing to cloud instead of syncing.");
+                            saveToFirebase();
+                            return;
+                        }
+
                         console.log("Syncing Firestore data...");
                         syncLocalData(data);
                         updateCloudStatus('synced-remote');
@@ -1363,6 +1429,57 @@
                 });
             }
 
+            let globalUnsubscribe = null;
+            function listenToGlobalSettings() {
+                if (globalUnsubscribe) globalUnsubscribe();
+                console.log("Listening to global settings...");
+                globalUnsubscribe = fs.collection('settings').doc('global').onSnapshot(doc => {
+                    if (doc.exists) {
+                        const data = doc.data();
+                        let lastSeenGlobalYear = localStorage.getItem("lastSeenGlobalYear");
+                        let needsRefresh = false;
+                        
+                        if (data.academicYears) {
+                            localStorage.setItem("academicYears", JSON.stringify(data.academicYears));
+                            academicYears = data.academicYears;
+                            needsRefresh = true;
+                        }
+                        
+                        if (data.currentAcademicYear && data.currentAcademicYear !== lastSeenGlobalYear) {
+                            localStorage.setItem("currentAcademicYear", data.currentAcademicYear);
+                            localStorage.setItem("lastSeenGlobalYear", data.currentAcademicYear);
+                            currentAcademicYear = data.currentAcademicYear;
+                            needsRefresh = true;
+                        }
+                        
+                        if (needsRefresh) {
+                            let acData = JSON.parse(localStorage.getItem("academicData") || "{}");
+                            let changedAcData = false;
+                            academicYears.forEach(year => {
+                                if (!acData[year]) {
+                                    acData[year] = { departments: [], students: [], subjects: [], grades: {}, monthlyGrades: {}, studentReports: {}, reportImagesByGender: { 'ذكر': [], 'أنثى': [] } };
+                                    changedAcData = true;
+                                }
+                            });
+                            if (changedAcData) {
+                                localStorage.setItem("academicData", JSON.stringify(acData));
+                                academicData = acData;
+                            }
+                            
+                            try {
+                                renderAcademicYears();
+                                loadDataForCurrentYear();
+                                refreshUI();
+                            } catch (e) {
+                                console.error("Error refreshing UI after global settings update:", e);
+                            }
+                        }
+                    }
+                }, error => {
+                    console.error("Global Settings Sync Error:", error);
+                });
+            }
+
             // Listen for Auth State Changes
             auth.onAuthStateChanged(user => {
                 if (user) {
@@ -1371,10 +1488,12 @@
                     cloudUserId = user.uid;
                     localStorage.setItem("cloudUserId", user.uid);
                     startFirestoreSync(cloudUserId);
+                    listenToGlobalSettings();
                 } else {
                     currentUser = null;
                     console.log("Not logged in. Using fallback cloudUserId:", cloudUserId);
                     startFirestoreSync(cloudUserId);
+                    listenToGlobalSettings();
                     signIn(); // Background login if not logged in
                 }
             });
@@ -1389,7 +1508,21 @@
                         await saveUserData(data);
                         syncLocalData(data);
                     } else {
-                        console.log("No previous backup found for this user. Starting with empty data.");
+                        console.log("No previous backup found for this user.");
+                        const localAcademicData = localStorage.getItem("academicData");
+                        if (!localAcademicData || localAcademicData === "{}" || localAcademicData === "[]") {
+                            console.log("Local storage is empty. Starting fresh.");
+                            const emptyData = {
+                                academicData: {},
+                                academicYears: [],
+                                currentAcademicYear: null,
+                                institutionName: ""
+                            };
+                            syncLocalData(emptyData);
+                        } else {
+                            console.log("Local storage has unsaved data. Triggering save to cloud.");
+                            saveToFirebase();
+                        }
                     }
                 } catch (e) {
                     console.error("Migration Error:", e);
@@ -1400,21 +1533,11 @@
                 if (data.academicData) localStorage.setItem("academicData", JSON.stringify(data.academicData));
                 if (data.academicYears) localStorage.setItem("academicYears", JSON.stringify(data.academicYears));
                 if (data.studentFields) localStorage.setItem("studentFields", JSON.stringify(data.studentFields));
-                // كل مستخدم يحتفظ بسنته الخاصة من Firestore
-                if (data.currentAcademicYear) {
-                    localStorage.setItem("currentAcademicYear", data.currentAcademicYear);
-                    currentAcademicYear = data.currentAcademicYear;
-                }
+                if (data.currentAcademicYear) localStorage.setItem("currentAcademicYear", data.currentAcademicYear);
                 if (data.institutionName) localStorage.setItem("institutionName", data.institutionName);
 
-                // تحديث المتغيرات من التخزين المحلي
-                academicData = JSON.parse(localStorage.getItem("academicData") || "{}");
-                academicYears = JSON.parse(localStorage.getItem("academicYears") || "[]");
-                // إعادة التحقق من صحة السنة الحالية
-                if (!currentAcademicYear || !academicYears.includes(currentAcademicYear)) {
-                    currentAcademicYear = academicYears.length > 0 ? academicYears[0] : null;
-                    if (currentAcademicYear) localStorage.setItem("currentAcademicYear", currentAcademicYear);
-                }
+                // Reload if current page state is significantly different (simplest approach)
+                // Or just refresh UI components
                 loadDataForCurrentYear();
                 refreshUI();
                 updateCloudStatus('synced-remote');
@@ -1503,6 +1626,8 @@
                     lastUpdated: new Date().toISOString(),
                     lastUpdatedBy: instanceId
                 };
+
+                localStorage.setItem("lastUpdated", dataToSave.lastUpdated);
 
                 // Save to Firestore (primary storage)
                 saveUserData(dataToSave);
@@ -1640,10 +1765,7 @@
             let departments = [], students = [], subjects = [], grades = {}, monthlyGrades = {}, studentReports = {}, reportActivities = [], reportBehaviors = [], generalObservations = [], institutionName = "", reportSessions = [], absences = {}, scoreObservations = []; // studentFields is now global
             let customFinalAverageLabels = []; //  <-- إضافة متغير جديد لحفظ النصوص المخصصة
             let globalFinalAverageLabel = 'المعدل العام السنوي'; // <-- متغير جديد لحفظ الاختيار العام
-            if (currentAcademicYear) {
-                if (!academicData[currentAcademicYear]) {
-                    academicData[currentAcademicYear] = {};
-                }
+            if (currentAcademicYear && academicData[currentAcademicYear]) {
                 const data = academicData[currentAcademicYear];
                 departments = data.departments || [];
                 students = data.students || [];
@@ -1658,15 +1780,9 @@
                 reportSessions = data.reportSessions || ["الدورة الأولى", "الدورة الثانية"];
                 reportImagesByGender = data.reportImagesByGender || { 'ذكر': [], 'أنثى': [] };
                 scoreObservations = data.scoreObservations || [{ min: 8, max: 10, text: "ممتاز" }, { min: 7, max: 7.99, text: "جيد جدا" }, { min: 6, max: 6.99, text: "حسن" }, { min: 5, max: 5.99, text: "مقبول" }, { min: 0, max: 4.99, text: "يحتاج لمجهود" }];
-                customFinalAverageLabels = data.customFinalAverageLabels || [];
+                customFinalAverageLabels = data.customFinalAverageLabels || []; // <-- تحميل النصوص المحفوظة
                 absences = data.absences || {};
-                globalFinalAverageLabel = data.globalFinalAverageLabel || 'المعدل العام السنوي';
-            } else {
-                generalObservations = ["يتحسن", "مجهود طيب", "عمل حسن", "يحتاج إلى تركيز", "يشارك", "لا يشارك"];
-                reportActivities = ["القرآن الكريم", "القيم والعادات", "اللغة العربية", "الرياضيات", "الأنشطة العلمية"];
-                reportBehaviors = ["المواظبة على الحضور", "السلوك داخل القسم"];
-                reportSessions = ["الدورة الأولى", "الدورة الثانية"];
-                scoreObservations = [{ min: 8, max: 10, text: "ممتاز" }, { min: 7, max: 7.99, text: "جيد جدا" }, { min: 6, max: 6.99, text: "حسن" }, { min: 5, max: 5.99, text: "مقبول" }, { min: 0, max: 4.99, text: "يحتاج لمجهود" }];
+                globalFinalAverageLabel = data.globalFinalAverageLabel || 'المعدل العام السنوي'; // <-- تحميل الاختيار المحفوظ
             }
             const allReportItems = [...reportActivities, ...reportBehaviors];
             // saveAll
@@ -1690,10 +1806,7 @@
             }
 
             const loadDataForCurrentYear = () => {
-                if (currentAcademicYear) {
-                    if (!academicData[currentAcademicYear]) {
-                        academicData[currentAcademicYear] = {};
-                    }
+                if (currentAcademicYear && academicData[currentAcademicYear]) {
                     const data = academicData[currentAcademicYear];
                     departments = data.departments || [];
                     students = data.students || [];
@@ -1711,23 +1824,6 @@
                     customFinalAverageLabels = data.customFinalAverageLabels || [];
                     absences = data.absences || {};
                     globalFinalAverageLabel = data.globalFinalAverageLabel || 'المعدل العام السنوي';
-
-                    // حفظ القيم الافتراضية محلياً لتجنب فقدانها عند الحفظ التالي
-                    data.departments = departments;
-                    data.students = students;
-                    data.subjects = subjects;
-                    data.grades = grades;
-                    data.monthlyGrades = monthlyGrades;
-                    data.studentReports = studentReports;
-                    data.generalObservations = generalObservations;
-                    data.reportActivities = reportActivities;
-                    data.reportBehaviors = reportBehaviors;
-                    data.reportSessions = reportSessions;
-                    data.reportImagesByGender = reportImagesByGender;
-                    data.scoreObservations = scoreObservations;
-                    data.customFinalAverageLabels = customFinalAverageLabels;
-                    data.absences = absences;
-                    data.globalFinalAverageLabel = globalFinalAverageLabel;
                 }
                 allReportItems.splice(0, allReportItems.length, ...reportActivities, ...reportBehaviors);
             }
@@ -1898,10 +1994,9 @@
             function renderYearList() {
                 yearList.innerHTML = "";
                 if (academicYears.length === 0) {
-                    yearList.innerHTML = `<p class="text-gray-500 text-center">لا توجد سنوات دراسية. أضف سنة جديدة بالأعلى.</p>`;
+                    yearList.innerHTML = `<p class="text-gray-500 text-center">لا توجد سنوات دراسية</p>`;
                     return;
                 }
-                const isAdmin = currentSession && currentSession.isAdmin;
                 academicYears.forEach(year => {
                     const li = document.createElement("li");
                     li.className = "flex justify-between items-center bg-gray-50 p-3 rounded-lg";
@@ -1910,7 +2005,7 @@
             <span class="font-medium ${isCurrent ? 'text-purple-700' : ''}">${year} ${isCurrent ? '<span class="bg-purple-100 text-purple-700 text-xs px-2 py-0.5 rounded-full mr-1">✅ الحالية</span>' : ''}</span>
             <div class="flex gap-2">
                 ${!isCurrent ? `<button class="bg-purple-500 hover:bg-purple-600 text-white px-3 py-1 rounded text-sm transition-btn" onclick="setCurrentYear('${year}')">🎯 تعيين كسنة حالية</button>` : ''}
-                ${isAdmin ? `<button class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm transition-btn" onclick="deleteYear('${year}')">حذف</button>` : `<button class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm transition-btn" onclick="deleteYear('${year}')">حذف</button>`}
+                <button class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm transition-btn" onclick="deleteYear('${year}')">حذف</button>
             </div>
         `;
                     yearList.appendChild(li);
@@ -4266,6 +4361,14 @@
             const importBtn = document.getElementById('importBtn');
 
             exportBtn.addEventListener('click', () => {
+                document.getElementById('exportModal').classList.remove('hidden');
+            });
+
+            importBtn.addEventListener('click', () => {
+                document.getElementById('importModal').classList.remove('hidden');
+            });
+
+            window.exportAll = function() {
                 // تجميع كل البيانات من localStorage
                 const dataToExport = {
                     academicYears: JSON.parse(localStorage.getItem("academicYears") || "[]"),
@@ -4286,44 +4389,127 @@
                 a.click();
                 document.body.removeChild(a);
                 URL.revokeObjectURL(url);
-                alert('تم تصدير نسخة احتياطية شاملة بنجاح.');
-            });
+                document.getElementById('exportModal').classList.add('hidden');
+            };
 
-            importBtn.addEventListener('click', () => {
-                const fileInput = document.createElement('input');
-                fileInput.type = 'file';
-                fileInput.accept = '.json';
-                fileInput.onchange = async (e) => {
-                    const file = e.target.files[0];
-                    if (!file) return;
-                    const reader = new FileReader();
-                    reader.onload = (event) => {
-                        try {
-                            const imported = JSON.parse(event.target.result);
-                            // التحقق من أن الملف يحتوي على البنية الجديدة
-                            if (imported.academicData && imported.academicYears) {
-                                if (confirm(`هل تريد استبدال جميع بيانات النظام الحالية بالبيانات من الملف المستورد؟ سيتم حذف جميع البيانات الحالية.`)) {
-                                    localStorage.setItem("academicYears", JSON.stringify(imported.academicYears));
-                                    localStorage.setItem("academicData", JSON.stringify(imported.academicData));
-                                    localStorage.setItem("currentAcademicYear", imported.currentAcademicYear);
-                                    localStorage.setItem("institutionName", imported.institutionName || "");
-                                    localStorage.setItem("studentFields", JSON.stringify(imported.studentFields || null));
-                                    localStorage.setItem("migration_v3_complete", imported.migration_v3_complete || "false");
-                                    alert('تم استيراد البيانات بنجاح. سيتم إعادة تحميل الصفحة.');
-                                    window.location.reload();
-                                }
-                            } else {
-                                alert("ملف الاستيراد غير صالح أو لا يطابق البنية المطلوبة.");
-                            }
-                        } catch (err) {
-                            alert("خطأ في قراءة الملف. تأكد من أنه ملف تصدير صحيح.");
-                            console.error(err);
-                        }
+            window.exportImages = function() {
+                const academicDataStr = localStorage.getItem("academicData");
+                if (!academicDataStr) return alert("لا توجد بيانات لتصديرها.");
+                
+                const acData = JSON.parse(academicDataStr);
+                const imagesExport = { type: 'images_only', years: {} };
+                
+                for (const year in acData) {
+                    imagesExport.years[year] = {
+                        studentImages: {},
+                        reportImagesByGender: acData[year].reportImagesByGender || { 'ذكر': [], 'أنثى': [] }
                     };
-                    reader.readAsText(file);
+                    if (acData[year].students) {
+                        acData[year].students.forEach(s => {
+                            const name = s.info && s.info['الاسم الكامل (بالعربية)'];
+                            if (name && s.info && s.info['صورة']) {
+                                imagesExport.years[year].studentImages[name] = s.info['صورة'];
+                            }
+                        });
+                    }
+                }
+
+                const dataStr = JSON.stringify(imagesExport, null, 2);
+                const blob = new Blob([dataStr], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `images_backup_${new Date().toISOString().split('T')[0]}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                document.getElementById('exportModal').classList.add('hidden');
+            };
+
+            window.importAll = async function(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    try {
+                        const imported = JSON.parse(event.target.result);
+                        if (imported.type === 'images_only') {
+                            alert("هذا الملف يحتوي على صور فقط. يرجى استخدام 'استيراد الصور فقط'.");
+                            return;
+                        }
+                        if (imported.academicData && imported.academicYears) {
+                            if (confirm(`هل تريد استبدال جميع بيانات النظام الحالية بالبيانات من الملف المستورد؟ سيتم حذف جميع البيانات الحالية.`)) {
+                                localStorage.setItem("academicYears", JSON.stringify(imported.academicYears));
+                                localStorage.setItem("academicData", JSON.stringify(imported.academicData));
+                                localStorage.setItem("currentAcademicYear", imported.currentAcademicYear);
+                                localStorage.setItem("institutionName", imported.institutionName || "");
+                                localStorage.setItem("studentFields", JSON.stringify(imported.studentFields || null));
+                                localStorage.setItem("migration_v3_complete", imported.migration_v3_complete || "false");
+                                alert('تم استيراد البيانات بنجاح. سيتم إعادة تحميل الصفحة.');
+                                window.location.reload();
+                            }
+                        } else {
+                            alert("ملف الاستيراد غير صالح أو لا يطابق البنية المطلوبة.");
+                        }
+                    } catch (err) {
+                        alert("خطأ في قراءة الملف.");
+                        console.error(err);
+                    }
                 };
-                fileInput.click();
-            });
+                reader.readAsText(file);
+                e.target.value = ''; // Reset
+                document.getElementById('importModal').classList.add('hidden');
+            };
+
+            window.importImages = async function(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    try {
+                        const imported = JSON.parse(event.target.result);
+                        if (imported.type !== 'images_only') {
+                            alert("هذا الملف ليس ملف صور فقط. يرجى استخدام 'استيراد كل البيانات'.");
+                            return;
+                        }
+                        
+                        const acData = JSON.parse(localStorage.getItem("academicData") || "{}");
+                        let importedCount = 0;
+
+                        for (const year in imported.years) {
+                            if (acData[year]) {
+                                // استيراد صور النتائج الدراسية
+                                if (imported.years[year].reportImagesByGender) {
+                                    acData[year].reportImagesByGender = imported.years[year].reportImagesByGender;
+                                }
+                                
+                                // استيراد صور التلاميذ حسب الاسم
+                                if (imported.years[year].studentImages && acData[year].students) {
+                                    acData[year].students.forEach(s => {
+                                        const name = s.info && s.info['الاسم الكامل (بالعربية)'];
+                                        if (name && imported.years[year].studentImages[name]) {
+                                            s.info['صورة'] = imported.years[year].studentImages[name];
+                                            importedCount++;
+                                        }
+                                    });
+                                }
+                            }
+                        }
+
+                        localStorage.setItem("academicData", JSON.stringify(acData));
+                        alert(`تم استيراد الصور بنجاح! تم ربط ${importedCount} صورة تلاميذ.`);
+                        window.location.reload();
+
+                    } catch (err) {
+                        alert("خطأ في قراءة الملف.");
+                        console.error(err);
+                    }
+                };
+                reader.readAsText(file);
+                e.target.value = ''; // Reset
+                document.getElementById('importModal').classList.add('hidden');
+            };
 
             // تهيئة نظام المصادقة عند تحميل الصفحة
             initAuth();
