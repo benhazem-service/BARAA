@@ -197,6 +197,30 @@
             width: 100%; max-width: 750px; max-height: 90vh;
             overflow-y: auto; box-shadow: 0 25px 50px rgba(0,0,0,0.35);
         }
+
+        /* أنماط حقول تعديل المعدلات يدوياً */
+        .session-avg-input:focus {
+            outline: 2px solid #6366f1;
+            outline-offset: 1px;
+        }
+        .session-avg-input:hover {
+            border-color: #6366f1 !important;
+        }
+        @media print {
+            .session-avg-input {
+                border: none !important;
+                background: transparent !important;
+                font-weight: bold;
+            }
+            .session-avg-reset, #finalAvgReset {
+                display: none !important;
+            }
+            #finalAvgInput {
+                border: none !important;
+                background: transparent !important;
+                font-weight: bold;
+            }
+        }
     </style>
 </head>
 
@@ -286,7 +310,7 @@
             <header class="flex justify-between items-center mb-8">
                 <h1 class="text-2xl font-bold text-indigo-700">📚 النظام التعليمي</h1>
                 <div class="flex gap-2 items-center">
-                    <!-- محدد السنة الدراسية (للمدير فقط) -->
+                    <!-- محدد السنة الدراسية (لجميع المستخدمين - كل مشترك يدير سنته الخاصة) -->
                     <div id="yearSelectorBox" class="flex items-center gap-2">
                         <label class="text-sm font-medium">السنة الدراسية:</label>
                         <button id="prevYearBtn" title="السنة السابقة"
@@ -475,6 +499,9 @@
                             <h3
                                 style="background: #4f46e5; color: #fff; padding: 6px 10px; border-radius: 6px; font-size: 16px; margin-top: 15px; margin-bottom: 10px;">
                                 التقدير الإجمالي </h3>
+                            <p class="print:hidden" style="font-size:12px; color:#6b7280; margin-bottom:6px; text-align:right;">
+                                ✏️ يمكنك تعديل معدل أي مرحلة يدوياً بالنقر على الخانة. المعدلات المعدّلة تظهر باللون الأصفر. انقر ↺ للرجوع للحساب التلقائي.
+                            </p>
                             <table
                                 style="width: 100%; border-collapse: collapse; text-align: center; font-size: 14px; margin-bottom: 15px;">
                                 <thead id="finalGradesHeader">
@@ -556,9 +583,9 @@
                     <button class="tab-btn tab-active px-4 py-2 rounded-lg font-medium border border-gray-600"
                         data-target="generalSettingsTab" data-admin-only="true">⚙️ إعدادات عامة</button>
                     <button class="tab-btn px-4 py-2 rounded-lg font-medium border border-purple-600"
-                        data-target="yearsTab" data-admin-only="true">📅 السنوات الدراسية</button>
+                        data-target="yearsTab">📅 السنوات الدراسية</button>
                     <button class="tab-btn px-4 py-2 rounded-lg font-medium border border-indigo-600"
-                        data-target="deptsTab" data-admin-only="true">🏫 الأقسام</button>
+                        data-target="deptsTab">🏫 الأقسام</button>
                     <button class="tab-btn px-4 py-2 rounded-lg font-medium border border-green-600"
                         data-target="studentsTab">👨‍🎓 التلاميذ</button>
                     <button class="tab-btn px-4 py-2 rounded-lg font-medium border border-amber-600"
@@ -1018,6 +1045,32 @@
 
             function clearSession() {
                 localStorage.removeItem('appSession');
+                localStorage.removeItem('cloudUserId');
+                localStorage.removeItem('academicData');
+                localStorage.removeItem('academicYears');
+                localStorage.removeItem('currentAcademicYear');
+                localStorage.removeItem('selectedHomeDept');
+                localStorage.removeItem('selectedHomeStudent');
+                localStorage.removeItem('institutionName');
+                
+                // تصفير المتغيرات العامة في الذاكرة لتكون الصفحة فارغة تماماً
+                academicData = {};
+                academicYears = [];
+                currentAcademicYear = null;
+                departments = [];
+                students = [];
+                subjects = [];
+                grades = {};
+                monthlyGrades = {};
+                studentReports = {};
+                reportActivities = ["القرآن الكريم", "القيم والعادات", "اللغة العربية", "الرياضيات", "الأنشطة العلمية"];
+                reportBehaviors = ["المواظبة على الحضور", "السلوك داخل القسم"];
+                reportSessions = ["الدورة الأولى", "الدورة الثانية"];
+                absences = {};
+                scoreObservations = [{ min: 8, max: 10, text: "ممتاز" }, { min: 7, max: 7.99, text: "جيد جدا" }, { min: 6, max: 6.99, text: "حسن" }, { min: 5, max: 5.99, text: "مقبول" }, { min: 0, max: 4.99, text: "يحتاج لمجهود" }];
+                customFinalAverageLabels = [];
+                globalFinalAverageLabel = 'المعدل العام السنوي';
+                selectedHomeStudentId = null;
             }
 
             // تهيئة نظام المصادقة عند تحميل الصفحة
@@ -1057,6 +1110,7 @@
                 try {
                     // التحقق من حساب الأدمن المضمّن
                     if (phone === ADMIN_PHONE && password === ADMIN_PASS_RAW) {
+                        clearSession(); // مسح البيانات القديمة تماماً فوراً قبل الدخول
                         const session = { phone: ADMIN_PHONE, name: 'المدير', isAdmin: true, levels: [] };
                         currentSession = session;
                         saveSession(session);
@@ -1077,6 +1131,7 @@
                         return;
                     }
 
+                    clearSession(); // مسح البيانات القديمة تماماً فوراً قبل الدخول
                     const session = {
                         phone: phone,
                         name: data.name || phone,
@@ -1106,68 +1161,28 @@
                 nameEl.classList.remove('hidden');
                 logoutBtn.classList.remove('hidden');
 
-                // عرض بطاقة الإدارة للأدمن
+                // عرض بطاقة إدارة الحسابات للمدير فقط
                 if (session.isAdmin) {
                     document.getElementById('adminCard').classList.remove('hidden');
-                } else {
-                    // إخفاء محدد السنة عن المشتركين — يتحكم به المدير
-                    const yearBox = document.getElementById('yearSelectorBox');
-                    if (yearBox) yearBox.classList.add('hidden');
-                    // تحميل بيانات المدير (السنة والأقسام) من Firestore
-                    loadAdminSharedData();
                 }
+                // كل مستخدم (admin أو مشترك) يدير بياناته المستقلة تماماً
 
                 // استخدام رقم الهاتف كـ cloudUserId
                 cloudUserId = session.phone;
                 localStorage.setItem('cloudUserId', cloudUserId);
 
-                // بدء المزامنة السحابية
+                // بدء المزامنة السحابية (كل مستخدم يمزامن بياناته الخاصة)
                 startFirestoreSync(cloudUserId);
                 signIn();
 
                 feather.replace();
             }
 
-            // تحميل بيانات المدير المشتركة (السنة الحالية والأقسام) للمشتركين
+            // لا توجد مشاركة بيانات بين المستخدمين — كل مستخدم يدير بياناته بشكل مستقل تماماً
+            // هذه الدالة محتفظة توافقاً مع الكود القديم ولكنها لا تستخدم بعد الآن
             async function loadAdminSharedData() {
-                try {
-                    const adminDoc = await fs.collection('users').doc(ADMIN_PHONE).get();
-                    if (adminDoc.exists) {
-                        const data = adminDoc.data();
-                        // استخدام السنة الدراسية التي حددها المدير
-                        if (data.currentAcademicYear) {
-                            localStorage.setItem('currentAcademicYear', data.currentAcademicYear);
-                            currentAcademicYear = data.currentAcademicYear;
-                        }
-                        // استخدام بيانات السنة من بيانات المدير (لأجل الأقسام)
-                        if (data.academicData && data.currentAcademicYear) {
-                            const adminYearData = data.academicData[data.currentAcademicYear] || {};
-                            // تحديث الأقسام محليا للسنة الحالية فقط
-                            if (!academicData[currentAcademicYear]) academicData[currentAcademicYear] = {};
-                            let adminDepts = adminYearData.departments || [];
-
-                            // فلترة الأقسام حسب المستويات المخصصة للمشترك
-                            const userLevels = currentSession && currentSession.levels ? currentSession.levels : [];
-                            if (userLevels.length > 0) {
-                                adminDepts = adminDepts.filter(d => {
-                                    const dName = typeof d === 'string' ? d : (d.name || '');
-                                    return userLevels.includes(dName);
-                                });
-                            }
-
-                            academicData[currentAcademicYear].departments = adminDepts;
-                            departments = adminDepts;
-                            // تحديث واجهة المستخدم
-                            refreshUI();
-                            renderHomeStudents();
-                            console.log('تم تحميل بيانات المدير: ', departments.length, 'قسم');
-                        }
-                    } else {
-                        console.log('لا توجد بيانات مدير بعد.');
-                    }
-                } catch (e) {
-                    console.error('خطأ تحميل بيانات المدير:', e);
-                }
+                // معطّلة — كل مستخدم مستقل ببياناته الخاصة
+                return;
             }
 
             function logoutUser() {
@@ -1368,14 +1383,13 @@
                 try {
                     const snapshot = await db.ref('backup/' + docId).once('value');
                     let data = snapshot.val();
-                    if (!data) {
-                        const sharedSnapshot = await db.ref('backup/latest').once('value');
-                        data = sharedSnapshot.val();
-                    }
+                    // تم إيقاف سحب backup/latest الافتراضي لكي لا تظهر بيانات المدير للمشتركين الجدد
                     if (data) {
                         console.log("Migrating data from RTDB to Firestore...");
                         await saveUserData(data);
                         syncLocalData(data);
+                    } else {
+                        console.log("No previous backup found for this user. Starting with empty data.");
                     }
                 } catch (e) {
                     console.error("Migration Error:", e);
@@ -1386,11 +1400,21 @@
                 if (data.academicData) localStorage.setItem("academicData", JSON.stringify(data.academicData));
                 if (data.academicYears) localStorage.setItem("academicYears", JSON.stringify(data.academicYears));
                 if (data.studentFields) localStorage.setItem("studentFields", JSON.stringify(data.studentFields));
-                if (data.currentAcademicYear) localStorage.setItem("currentAcademicYear", data.currentAcademicYear);
+                // كل مستخدم يحتفظ بسنته الخاصة من Firestore
+                if (data.currentAcademicYear) {
+                    localStorage.setItem("currentAcademicYear", data.currentAcademicYear);
+                    currentAcademicYear = data.currentAcademicYear;
+                }
                 if (data.institutionName) localStorage.setItem("institutionName", data.institutionName);
 
-                // Reload if current page state is significantly different (simplest approach)
-                // Or just refresh UI components
+                // تحديث المتغيرات من التخزين المحلي
+                academicData = JSON.parse(localStorage.getItem("academicData") || "{}");
+                academicYears = JSON.parse(localStorage.getItem("academicYears") || "[]");
+                // إعادة التحقق من صحة السنة الحالية
+                if (!currentAcademicYear || !academicYears.includes(currentAcademicYear)) {
+                    currentAcademicYear = academicYears.length > 0 ? academicYears[0] : null;
+                    if (currentAcademicYear) localStorage.setItem("currentAcademicYear", currentAcademicYear);
+                }
                 loadDataForCurrentYear();
                 refreshUI();
                 updateCloudStatus('synced-remote');
@@ -1597,22 +1621,11 @@
             }
             migrateOldData();
 
-            // تعيين السنة الدراسية الحالية
-            const targetYear = "2025/2026";
-
-            // التأكد من وجود السنة الدراسية المستهدفة
-            if (!academicYears.includes(targetYear)) {
-                academicYears.unshift(targetYear); // إضافتها في بداية القائمة
-                academicData[targetYear] = { departments: [], students: [], subjects: [], grades: {}, monthlyGrades: {} };
-            }
-
-            // تعيينها كالسنة الحالية وحفظ التغييرات
-            currentAcademicYear = targetYear;
+            // تعيين السنة الدراسية الحالية — يعتمد على اختيار المدير المحفوظ في localStorage
             if (!currentAcademicYear || !academicYears.includes(currentAcademicYear)) {
+                // إذا لم يكن هناك اختيار محفوظ، اختر السنة الأولى من القائمة أو اتركها فارغة
                 currentAcademicYear = academicYears.length > 0 ? academicYears[0] : null;
-                localStorage.setItem("currentAcademicYear", currentAcademicYear);
-            } else {
-                localStorage.setItem("currentAcademicYear", currentAcademicYear);
+                if (currentAcademicYear) localStorage.setItem("currentAcademicYear", currentAcademicYear);
             }
 
 
@@ -1627,7 +1640,10 @@
             let departments = [], students = [], subjects = [], grades = {}, monthlyGrades = {}, studentReports = {}, reportActivities = [], reportBehaviors = [], generalObservations = [], institutionName = "", reportSessions = [], absences = {}, scoreObservations = []; // studentFields is now global
             let customFinalAverageLabels = []; //  <-- إضافة متغير جديد لحفظ النصوص المخصصة
             let globalFinalAverageLabel = 'المعدل العام السنوي'; // <-- متغير جديد لحفظ الاختيار العام
-            if (currentAcademicYear && academicData[currentAcademicYear]) {
+            if (currentAcademicYear) {
+                if (!academicData[currentAcademicYear]) {
+                    academicData[currentAcademicYear] = {};
+                }
                 const data = academicData[currentAcademicYear];
                 departments = data.departments || [];
                 students = data.students || [];
@@ -1642,9 +1658,15 @@
                 reportSessions = data.reportSessions || ["الدورة الأولى", "الدورة الثانية"];
                 reportImagesByGender = data.reportImagesByGender || { 'ذكر': [], 'أنثى': [] };
                 scoreObservations = data.scoreObservations || [{ min: 8, max: 10, text: "ممتاز" }, { min: 7, max: 7.99, text: "جيد جدا" }, { min: 6, max: 6.99, text: "حسن" }, { min: 5, max: 5.99, text: "مقبول" }, { min: 0, max: 4.99, text: "يحتاج لمجهود" }];
-                customFinalAverageLabels = data.customFinalAverageLabels || []; // <-- تحميل النصوص المحفوظة
+                customFinalAverageLabels = data.customFinalAverageLabels || [];
                 absences = data.absences || {};
-                globalFinalAverageLabel = data.globalFinalAverageLabel || 'المعدل العام السنوي'; // <-- تحميل الاختيار المحفوظ
+                globalFinalAverageLabel = data.globalFinalAverageLabel || 'المعدل العام السنوي';
+            } else {
+                generalObservations = ["يتحسن", "مجهود طيب", "عمل حسن", "يحتاج إلى تركيز", "يشارك", "لا يشارك"];
+                reportActivities = ["القرآن الكريم", "القيم والعادات", "اللغة العربية", "الرياضيات", "الأنشطة العلمية"];
+                reportBehaviors = ["المواظبة على الحضور", "السلوك داخل القسم"];
+                reportSessions = ["الدورة الأولى", "الدورة الثانية"];
+                scoreObservations = [{ min: 8, max: 10, text: "ممتاز" }, { min: 7, max: 7.99, text: "جيد جدا" }, { min: 6, max: 6.99, text: "حسن" }, { min: 5, max: 5.99, text: "مقبول" }, { min: 0, max: 4.99, text: "يحتاج لمجهود" }];
             }
             const allReportItems = [...reportActivities, ...reportBehaviors];
             // saveAll
@@ -1668,7 +1690,10 @@
             }
 
             const loadDataForCurrentYear = () => {
-                if (currentAcademicYear && academicData[currentAcademicYear]) {
+                if (currentAcademicYear) {
+                    if (!academicData[currentAcademicYear]) {
+                        academicData[currentAcademicYear] = {};
+                    }
                     const data = academicData[currentAcademicYear];
                     departments = data.departments || [];
                     students = data.students || [];
@@ -1686,6 +1711,23 @@
                     customFinalAverageLabels = data.customFinalAverageLabels || [];
                     absences = data.absences || {};
                     globalFinalAverageLabel = data.globalFinalAverageLabel || 'المعدل العام السنوي';
+
+                    // حفظ القيم الافتراضية محلياً لتجنب فقدانها عند الحفظ التالي
+                    data.departments = departments;
+                    data.students = students;
+                    data.subjects = subjects;
+                    data.grades = grades;
+                    data.monthlyGrades = monthlyGrades;
+                    data.studentReports = studentReports;
+                    data.generalObservations = generalObservations;
+                    data.reportActivities = reportActivities;
+                    data.reportBehaviors = reportBehaviors;
+                    data.reportSessions = reportSessions;
+                    data.reportImagesByGender = reportImagesByGender;
+                    data.scoreObservations = scoreObservations;
+                    data.customFinalAverageLabels = customFinalAverageLabels;
+                    data.absences = absences;
+                    data.globalFinalAverageLabel = globalFinalAverageLabel;
                 }
                 allReportItems.splice(0, allReportItems.length, ...reportActivities, ...reportBehaviors);
             }
@@ -1856,20 +1898,46 @@
             function renderYearList() {
                 yearList.innerHTML = "";
                 if (academicYears.length === 0) {
-                    yearList.innerHTML = `<p class="text-gray-500 text-center">لا توجد سنوات دراسية</p>`;
+                    yearList.innerHTML = `<p class="text-gray-500 text-center">لا توجد سنوات دراسية. أضف سنة جديدة بالأعلى.</p>`;
                     return;
                 }
+                const isAdmin = currentSession && currentSession.isAdmin;
                 academicYears.forEach(year => {
                     const li = document.createElement("li");
                     li.className = "flex justify-between items-center bg-gray-50 p-3 rounded-lg";
+                    const isCurrent = year === currentAcademicYear;
                     li.innerHTML = `
-            <span class="font-medium ${year === currentAcademicYear ? 'text-purple-700' : ''}">${year} ${year === currentAcademicYear ? '(الحالية)' : ''}</span>
+            <span class="font-medium ${isCurrent ? 'text-purple-700' : ''}">${year} ${isCurrent ? '<span class="bg-purple-100 text-purple-700 text-xs px-2 py-0.5 rounded-full mr-1">✅ الحالية</span>' : ''}</span>
             <div class="flex gap-2">
-                <button class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm transition-btn" onclick="deleteYear('${year}')">حذف</button>
+                ${!isCurrent ? `<button class="bg-purple-500 hover:bg-purple-600 text-white px-3 py-1 rounded text-sm transition-btn" onclick="setCurrentYear('${year}')">🎯 تعيين كسنة حالية</button>` : ''}
+                ${isAdmin ? `<button class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm transition-btn" onclick="deleteYear('${year}')">حذف</button>` : `<button class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm transition-btn" onclick="deleteYear('${year}')">حذف</button>`}
             </div>
         `;
                     yearList.appendChild(li);
                 });
+            }
+
+            function setCurrentYear(year) {
+                if (!academicYears.includes(year)) return;
+                currentAcademicYear = year;
+                localStorage.setItem("currentAcademicYear", currentAcademicYear);
+
+                // مزامنة مع Firestore لحفظ اختيار المدير
+                saveAll();
+
+                // تحديث محدد السنة في رأس الصفحة
+                academicYearSelect.value = currentAcademicYear;
+                const yearSelectForStudents = document.getElementById("yearSelectForStudents");
+                if (yearSelectForStudents) yearSelectForStudents.value = currentAcademicYear;
+                const currentIndex = academicYears.indexOf(currentAcademicYear);
+                prevYearBtn.disabled = currentIndex <= 0;
+                nextYearBtn.disabled = currentIndex >= academicYears.length - 1;
+
+                loadDataForCurrentYear();
+                refreshUI();
+
+                // إعادة رسم قائمة السنوات لتحديث علامة "الحالية"
+                renderYearList();
             }
 
             function deleteYear(year) {
@@ -2277,8 +2345,6 @@
                 const finalGradesBody = document.getElementById('finalGradesBody');
                 let headerHTML = '<tr>';
                 let bodyHTML = '<tr>';
-                let totalAvg = 0;
-                let avgCount = 0;
 
                 // دمج الخيارات الافتراضية مع الخيارات المخصصة المحفوظة
                 const defaultOptions = ['معدل المرحلة الأولى', 'معدل المرحلة الثانية', 'المعدل العام السنوي'];
@@ -2289,28 +2355,136 @@
                 ).join('');
 
                 const finalAverageDropdownHTML = `
-    
         <select id="finalAverageLabelSelect" class="w-full bg-transparent text-center font-bold focus:outline-none p-1">${optionsHTML}<option value="custom">نص مخصص...</option><option value="delete-custom" class="text-red-500">حذف نص مخصص...</option></select>
     `;
 
+                const studentReportData = studentReports[studentId] || {};
+                let sessionAvgs = [];
+
                 reportSessions.forEach(session => {
                     headerHTML += `<th style="border: 1px solid #ddd; padding: 8px;">معدل ${session}</th>`;
-                    // استخدام المعدل المحسوب للدورة بدلاً من المجموع
-                    const sessionAvg = parseFloat(studentReports[studentId]?.[session]?.behaviorAverage) || 0;
-                    bodyHTML += `<td style="border: 1px solid #ddd; padding: 8px; font-weight: bold; color: #1d4ed8;">${sessionAvg > 0 ? sessionAvg.toFixed(2) : '-'}</td>`;
-                    if (sessionAvg > 0) {
-                        totalAvg += sessionAvg;
-                        avgCount++;
-                    }
+                    // استخدام المعدل اليدوي إن وجد، وإلا المحسوب تلقائياً
+                    const autoAvg = parseFloat(studentReportData[session]?.behaviorAverage) || 0;
+                    const manualAvg = studentReportData[session]?.manualAverage;
+                    const displayAvg = (manualAvg !== undefined && manualAvg !== '') ? parseFloat(manualAvg) : autoAvg;
+                    const hasManual = (manualAvg !== undefined && manualAvg !== '');
+
+                    sessionAvgs.push({ session, autoAvg, displayAvg });
+
+                    bodyHTML += `<td style="border: 1px solid #ddd; padding: 4px; text-align:center;">
+                        <div style="display:flex; align-items:center; justify-content:center; gap:4px;">
+                            <input type="number"
+                                class="session-avg-input"
+                                data-session="${session}"
+                                data-student="${studentId}"
+                                value="${displayAvg > 0 ? displayAvg.toFixed(2) : ''}"
+                                placeholder="—"
+                                min="0" max="10" step="0.01"
+                                style="width:70px; text-align:center; border:1px solid ${hasManual ? '#f59e0b' : '#d1d5db'}; border-radius:6px; padding:4px 2px; font-weight:bold; color:${hasManual ? '#b45309' : '#1d4ed8'}; background:${hasManual ? '#fef3c7' : '#fff'};">
+                            ${hasManual ? `<button class="session-avg-reset" data-session="${session}" data-student="${studentId}" title="إعادة الحساب التلقائي" style="background:none;border:none;cursor:pointer;font-size:14px;color:#9ca3af;">↺</button>` : ''}
+                        </div>
+                    </td>`;
                 });
 
-                const finalAvg = avgCount > 0 ? (totalAvg / avgCount).toFixed(2) : '-';
-                // استخدام القائمة المنسدلة بدلاً من النص
+                // حساب المعدل العام السنوي
+                const validAvgs = sessionAvgs.filter(s => s.displayAvg > 0);
+                const totalSum = validAvgs.reduce((sum, s) => sum + s.displayAvg, 0);
+                const manualFinalAvg = studentReportData._manualFinalAverage;
+                const autoFinalAvg = validAvgs.length > 0 ? (totalSum / validAvgs.length).toFixed(2) : '-';
+                const displayFinalAvg = (manualFinalAvg !== undefined && manualFinalAvg !== '') ? manualFinalAvg : autoFinalAvg;
+                const hasFinalManual = (manualFinalAvg !== undefined && manualFinalAvg !== '');
+
                 headerHTML += `<th style="border: 1px solid #ddd; padding: 0; background-color: #e0e7ff;">${finalAverageDropdownHTML}</th></tr>`;
-                bodyHTML += `<td style="border: 1px solid #ddd; padding: 8px; font-weight: bold; color: #1e3a8a; background-color: #e0e7ff;">${finalAvg}</td></tr>`;
+                bodyHTML += `<td style="border: 1px solid #ddd; padding: 4px; background-color: #e0e7ff; text-align:center;">
+                    <div style="display:flex; align-items:center; justify-content:center; gap:4px;">
+                        <input type="number"
+                            id="finalAvgInput"
+                            data-student="${studentId}"
+                            value="${displayFinalAvg !== '-' ? displayFinalAvg : ''}"
+                            placeholder="—"
+                            min="0" max="10" step="0.01"
+                            style="width:70px; text-align:center; border:1px solid ${hasFinalManual ? '#f59e0b' : '#c7d2fe'}; border-radius:6px; padding:4px 2px; font-weight:bold; color:${hasFinalManual ? '#b45309' : '#1e3a8a'}; background:${hasFinalManual ? '#fef3c7' : '#ede9fe'};">
+                        ${hasFinalManual ? `<button id="finalAvgReset" data-student="${studentId}" title="إعادة الحساب التلقائي" style="background:none;border:none;cursor:pointer;font-size:14px;color:#9ca3af;">↺</button>` : ''}
+                    </div>
+                </td></tr>`;
 
                 finalGradesHeader.innerHTML = headerHTML;
                 finalGradesBody.innerHTML = bodyHTML;
+
+                // ===== مستمعو أحداث الإدخال =====
+                // معدلات المراحل
+                document.querySelectorAll('.session-avg-input').forEach(input => {
+                    input.addEventListener('change', function() {
+                        const sid = this.dataset.student;
+                        const sess = this.dataset.session;
+                        if (!studentReports[sid]) studentReports[sid] = {};
+                        if (!studentReports[sid][sess]) studentReports[sid][sess] = {};
+                        const val = this.value.trim();
+                        if (val === '') {
+                            // مسح التعديل اليدوي → الرجوع للحساب التلقائي
+                            delete studentReports[sid][sess].manualAverage;
+                        } else {
+                            const num = parseFloat(val);
+                            if (isNaN(num) || num < 0 || num > 10) {
+                                alert('قيمة غير صحيحة. يجب أن تكون بين 0 و 10.');
+                                this.value = '';
+                                return;
+                            }
+                            studentReports[sid][sess].manualAverage = num.toFixed(2);
+                        }
+                        saveAll();
+                        updateFinalGradesTable(sid);
+                    });
+                });
+
+                // أزرار إعادة الحساب للمراحل
+                document.querySelectorAll('.session-avg-reset').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        const sid = this.dataset.student;
+                        const sess = this.dataset.session;
+                        if (studentReports[sid]?.[sess]) {
+                            delete studentReports[sid][sess].manualAverage;
+                        }
+                        saveAll();
+                        updateFinalGradesTable(sid);
+                    });
+                });
+
+                // المعدل العام السنوي
+                const finalAvgInput = document.getElementById('finalAvgInput');
+                if (finalAvgInput) {
+                    finalAvgInput.addEventListener('change', function() {
+                        const sid = this.dataset.student;
+                        if (!studentReports[sid]) studentReports[sid] = {};
+                        const val = this.value.trim();
+                        if (val === '') {
+                            delete studentReports[sid]._manualFinalAverage;
+                        } else {
+                            const num = parseFloat(val);
+                            if (isNaN(num) || num < 0 || num > 10) {
+                                alert('قيمة غير صحيحة. يجب أن تكون بين 0 و 10.');
+                                this.value = '';
+                                return;
+                            }
+                            studentReports[sid]._manualFinalAverage = num.toFixed(2);
+                        }
+                        saveAll();
+                        updateFinalGradesTable(sid);
+                    });
+                }
+
+                // زر إعادة الحساب للمعدل العام
+                const finalAvgReset = document.getElementById('finalAvgReset');
+                if (finalAvgReset) {
+                    finalAvgReset.addEventListener('click', function() {
+                        const sid = this.dataset.student;
+                        if (studentReports[sid]) {
+                            delete studentReports[sid]._manualFinalAverage;
+                        }
+                        saveAll();
+                        updateFinalGradesTable(sid);
+                    });
+                }
             }
 
             function fillCell(cell, value) {
@@ -2463,8 +2637,8 @@
 
                 const sheet = document.getElementById('sheet').cloneNode(true);
 
-                // إزالة عناصر التحكم في الصور (مقبض التكبير وزر الحذف) من النسخة المعدة للطباعة
-                sheet.querySelectorAll('.resize-handle, .delete-image-btn').forEach(el => {
+                // إزالة عناصر التحكم في الصور وأزرار إعادة الحساب من النسخة المعدة للطباعة
+                sheet.querySelectorAll('.resize-handle, .delete-image-btn, .session-avg-reset, #finalAvgReset').forEach(el => {
                     el.remove();
                 });
 
