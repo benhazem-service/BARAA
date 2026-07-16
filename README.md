@@ -966,20 +966,25 @@
 
         <script>
 const appStorage = {
+    _getPrefix: () => {
+        // استخراج رقم الهاتف من الجلسة المخزنة مباشرة لضمان الـ prefix الصحيح دائماً
+        try {
+            const session = JSON.parse(localStorage.getItem("sub_appSession") || "null");
+            if (session && session.phone) return "sub_" + session.phone + "_";
+        } catch(e) {}
+        return "sub_" + (localStorage.getItem("sub_cloudUserId") || "default") + "_";
+    },
     getItem: (k) => {
         if (k === 'appSession' || k === 'cloudUserId' || k === 'firebaseDatabaseURL' || k === 'lastSeenGlobalYear') return localStorage.getItem("sub_" + k);
-        const prefix = "sub_" + (localStorage.getItem("sub_cloudUserId") || "default") + "_";
-        return localStorage.getItem(prefix + k);
+        return localStorage.getItem(appStorage._getPrefix() + k);
     },
     setItem: (k, v) => {
         if (k === 'appSession' || k === 'cloudUserId' || k === 'firebaseDatabaseURL' || k === 'lastSeenGlobalYear') return localStorage.setItem("sub_" + k, v);
-        const prefix = "sub_" + (localStorage.getItem("sub_cloudUserId") || "default") + "_";
-        localStorage.setItem(prefix + k, v);
+        localStorage.setItem(appStorage._getPrefix() + k, v);
     },
     removeItem: (k) => {
         if (k === 'appSession' || k === 'cloudUserId' || k === 'firebaseDatabaseURL' || k === 'lastSeenGlobalYear') return localStorage.removeItem("sub_" + k);
-        const prefix = "sub_" + (localStorage.getItem("sub_cloudUserId") || "default") + "_";
-        localStorage.removeItem(prefix + k);
+        localStorage.removeItem(appStorage._getPrefix() + k);
     }
 };
 
