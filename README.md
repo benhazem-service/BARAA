@@ -965,7 +965,39 @@
         </div>
 
         <script>
-            feather.replace();
+const appStorage = {
+    getItem: (k) => {
+        if (k === 'appSession' || k === 'cloudUserId' || k === 'firebaseDatabaseURL' || k === 'lastSeenGlobalYear') return localStorage.getItem("sub_" + k);
+        const prefix = "sub_" + (localStorage.getItem("sub_cloudUserId") || "default") + "_";
+        return localStorage.getItem(prefix + k);
+    },
+    setItem: (k, v) => {
+        if (k === 'appSession' || k === 'cloudUserId' || k === 'firebaseDatabaseURL' || k === 'lastSeenGlobalYear') return localStorage.setItem("sub_" + k, v);
+        const prefix = "sub_" + (localStorage.getItem("sub_cloudUserId") || "default") + "_";
+        localStorage.setItem(prefix + k, v);
+    },
+    removeItem: (k) => {
+        if (k === 'appSession' || k === 'cloudUserId' || k === 'firebaseDatabaseURL' || k === 'lastSeenGlobalYear') return localStorage.removeItem("sub_" + k);
+        const prefix = "sub_" + (localStorage.getItem("sub_cloudUserId") || "default") + "_";
+        localStorage.removeItem(prefix + k);
+    }
+};
+
+
+
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+feather.replace();
 
             const instanceId = Date.now().toString() + Math.random().toString().slice(2, 6);
 
@@ -997,7 +1029,7 @@
             // --- Firebase Configuration ---
             // Attempt to get saved URL or use default
             const defaultDbUrl = "https://ustad-bilal-default-rtdb.firebaseio.com";
-            let savedDatabaseURL = localStorage.getItem("firebaseDatabaseURL") || defaultDbUrl;
+            let savedDatabaseURL = appStorage.getItem("firebaseDatabaseURL") || defaultDbUrl;
 
             const firebaseConfig = {
                 apiKey: "AIzaSyCy2livge5Mfjl1-fcYAtDY38dsSiXMm8g",
@@ -1023,7 +1055,7 @@
             // Re-initialize if URL changes
             function updateFirebaseConfig(newUrl) {
                 if (!newUrl) return;
-                localStorage.setItem("firebaseDatabaseURL", newUrl);
+                appStorage.setItem("firebaseDatabaseURL", newUrl);
                 alert("تم حفظ الرابط. سيتم إعادة تحميل الصفحة لتطبيق التغييرات.");
                 location.reload();
             }
@@ -1065,17 +1097,17 @@
 
             function loadSession() {
                 try {
-                    const s = localStorage.getItem('appSession');
+                    const s = appStorage.getItem('appSession');
                     return s ? JSON.parse(s) : null;
                 } catch { return null; }
             }
 
             function saveSession(session) {
-                localStorage.setItem('appSession', JSON.stringify(session));
+                appStorage.setItem('appSession', JSON.stringify(session));
             }
 
             function clearSession() {
-                localStorage.removeItem('appSession');
+                appStorage.removeItem('appSession');
             }
 
             // تهيئة نظام المصادقة عند تحميل الصفحة
@@ -1174,7 +1206,7 @@
 
                 // استخدام رقم الهاتف كـ cloudUserId
                 cloudUserId = session.phone;
-                localStorage.setItem('cloudUserId', cloudUserId);
+                appStorage.setItem('cloudUserId', cloudUserId);
 
                 // بدء المزامنة السحابية
                 startFirestoreSync(cloudUserId);
@@ -1191,16 +1223,16 @@
                         const data = adminDoc.data();
                         // استخدام السنة الدراسية التي حددها المدير
                         if (data.currentAcademicYear) {
-                            localStorage.setItem('currentAcademicYear', data.currentAcademicYear);
+                            appStorage.setItem('currentAcademicYear', data.currentAcademicYear);
                             currentAcademicYear = data.currentAcademicYear;
                         }
                         
                         // تحميل قائمة السنوات كاحتياطي إذا لم تكن موجودة في الإعدادات العامة
                         if (data.academicYears && academicYears.length === 0) {
-                            localStorage.setItem('academicYears', JSON.stringify(data.academicYears));
+                            appStorage.setItem('academicYears', JSON.stringify(data.academicYears));
                             academicYears = data.academicYears;
                             
-                            let acData = JSON.parse(localStorage.getItem("academicData") || "{}");
+                            let acData = JSON.parse(appStorage.getItem("academicData") || "{}");
                             let changedAcData = false;
                             academicYears.forEach(year => {
                                 if (!acData[year]) {
@@ -1209,7 +1241,7 @@
                                 }
                             });
                             if (changedAcData) {
-                                localStorage.setItem("academicData", JSON.stringify(acData));
+                                appStorage.setItem("academicData", JSON.stringify(acData));
                                 academicData = acData;
                             }
                         }
@@ -1409,8 +1441,8 @@
                         // Ignore our own updates
                         if (data.lastUpdatedBy === instanceId) return;
 
-                        const localLastUpdated = localStorage.getItem("lastUpdated");
-                        if (localLastUpdated && data.lastUpdated && new Date(localLastUpdated) > new Date(data.lastUpdated)) {
+                        const localLastUpdated = appStorage.getItem("lastUpdated");
+                        if (localLastUpdated && data.lastUpdated && new Date(localLastUpdated) >= new Date(data.lastUpdated)) {
                             console.log("Local data is newer than cloud data. Pushing to cloud instead of syncing.");
                             saveToFirebase();
                             return;
@@ -1436,24 +1468,24 @@
                 globalUnsubscribe = fs.collection('settings').doc('global').onSnapshot(doc => {
                     if (doc.exists) {
                         const data = doc.data();
-                        let lastSeenGlobalYear = localStorage.getItem("lastSeenGlobalYear");
+                        let lastSeenGlobalYear = appStorage.getItem("lastSeenGlobalYear");
                         let needsRefresh = false;
                         
                         if (data.academicYears) {
-                            localStorage.setItem("academicYears", JSON.stringify(data.academicYears));
+                            appStorage.setItem("academicYears", JSON.stringify(data.academicYears));
                             academicYears = data.academicYears;
                             needsRefresh = true;
                         }
                         
                         if (data.currentAcademicYear && data.currentAcademicYear !== lastSeenGlobalYear) {
-                            localStorage.setItem("currentAcademicYear", data.currentAcademicYear);
-                            localStorage.setItem("lastSeenGlobalYear", data.currentAcademicYear);
+                            appStorage.setItem("currentAcademicYear", data.currentAcademicYear);
+                            appStorage.setItem("lastSeenGlobalYear", data.currentAcademicYear);
                             currentAcademicYear = data.currentAcademicYear;
                             needsRefresh = true;
                         }
                         
                         if (needsRefresh) {
-                            let acData = JSON.parse(localStorage.getItem("academicData") || "{}");
+                            let acData = JSON.parse(appStorage.getItem("academicData") || "{}");
                             let changedAcData = false;
                             academicYears.forEach(year => {
                                 if (!acData[year]) {
@@ -1462,7 +1494,7 @@
                                 }
                             });
                             if (changedAcData) {
-                                localStorage.setItem("academicData", JSON.stringify(acData));
+                                appStorage.setItem("academicData", JSON.stringify(acData));
                                 academicData = acData;
                             }
                             
@@ -1486,7 +1518,7 @@
                     currentUser = user;
                     console.log("Logged in anonymously as:", user.uid);
                     cloudUserId = user.uid;
-                    localStorage.setItem("cloudUserId", user.uid);
+                    appStorage.setItem("cloudUserId", user.uid);
                     startFirestoreSync(cloudUserId);
                     listenToGlobalSettings();
                 } else {
@@ -1509,7 +1541,7 @@
                         syncLocalData(data);
                     } else {
                         console.log("No previous backup found for this user.");
-                        const localAcademicData = localStorage.getItem("academicData");
+                        const localAcademicData = appStorage.getItem("academicData");
                         if (!localAcademicData || localAcademicData === "{}" || localAcademicData === "[]") {
                             console.log("Local storage is empty. Starting fresh.");
                             const emptyData = {
@@ -1530,11 +1562,11 @@
             }
 
             function syncLocalData(data) {
-                if (data.academicData) localStorage.setItem("academicData", JSON.stringify(data.academicData));
-                if (data.academicYears) localStorage.setItem("academicYears", JSON.stringify(data.academicYears));
-                if (data.studentFields) localStorage.setItem("studentFields", JSON.stringify(data.studentFields));
-                if (data.currentAcademicYear) localStorage.setItem("currentAcademicYear", data.currentAcademicYear);
-                if (data.institutionName) localStorage.setItem("institutionName", data.institutionName);
+                if (data.academicData) appStorage.setItem("academicData", JSON.stringify(data.academicData));
+                if (data.academicYears) appStorage.setItem("academicYears", JSON.stringify(data.academicYears));
+                if (data.studentFields) appStorage.setItem("studentFields", JSON.stringify(data.studentFields));
+                if (data.currentAcademicYear) appStorage.setItem("currentAcademicYear", data.currentAcademicYear);
+                if (data.institutionName) appStorage.setItem("institutionName", data.institutionName);
 
                 // Reload if current page state is significantly different (simplest approach)
                 // Or just refresh UI components
@@ -1616,18 +1648,18 @@
                     return stripped;
                 }
 
-                const rawAcademicData = JSON.parse(localStorage.getItem("academicData") || "{}");
+                const rawAcademicData = JSON.parse(appStorage.getItem("academicData") || "{}");
                 const dataToSave = {
                     academicData: stripImagesFromAcademicData(rawAcademicData),
-                    academicYears: JSON.parse(localStorage.getItem("academicYears") || "[]"),
-                    studentFields: JSON.parse(localStorage.getItem("studentFields") || "[]"),
-                    currentAcademicYear: localStorage.getItem("currentAcademicYear"),
-                    institutionName: localStorage.getItem("institutionName"),
+                    academicYears: JSON.parse(appStorage.getItem("academicYears") || "[]"),
+                    studentFields: JSON.parse(appStorage.getItem("studentFields") || "[]"),
+                    currentAcademicYear: appStorage.getItem("currentAcademicYear"),
+                    institutionName: appStorage.getItem("institutionName"),
                     lastUpdated: new Date().toISOString(),
                     lastUpdatedBy: instanceId
                 };
 
-                localStorage.setItem("lastUpdated", dataToSave.lastUpdated);
+                appStorage.setItem("lastUpdated", dataToSave.lastUpdated);
 
                 // Save to Firestore (primary storage)
                 saveUserData(dataToSave);
@@ -1689,30 +1721,30 @@
             // (Manual cloud save button removed - auto-save handles all syncing)
 
             // --- نظام السنوات الدراسية ---
-            let academicYears = JSON.parse(localStorage.getItem("academicYears") || "[]");
-            let currentAcademicYear = localStorage.getItem("currentAcademicYear");
-            let academicData = JSON.parse(localStorage.getItem("academicData") || "{}");
+            let academicYears = JSON.parse(appStorage.getItem("academicYears") || "[]");
+            let currentAcademicYear = appStorage.getItem("currentAcademicYear");
+            let academicData = JSON.parse(appStorage.getItem("academicData") || "{}");
 
-            let studentFields = JSON.parse(localStorage.getItem("studentFields"));
+            let studentFields = JSON.parse(appStorage.getItem("studentFields"));
 
             // ترحيل البيانات القديمة إلى النظام الجديد (يُنفذ مرة واحدة فقط)
             function migrateOldData() {
-                if (localStorage.getItem("migration_v3_complete") === "true") return;
+                if (appStorage.getItem("migration_v3_complete") === "true") return;
 
                 let migrationPerformed = false;
-                const oldDepts = localStorage.getItem("departments");
+                const oldDepts = appStorage.getItem("departments");
                 if (oldDepts && !Object.keys(academicData).length) { // Check if academicData is empty
                     const defaultYear = "2023/2024";
                     if (!academicYears.includes(defaultYear)) {
                         academicYears = [defaultYear];
                         academicData[defaultYear] = {
                             departments: JSON.parse(oldDepts || "[]"),
-                            students: JSON.parse(localStorage.getItem("students") || "[]"),
-                            subjects: JSON.parse(localStorage.getItem("subjects") || "[]"),
-                            grades: JSON.parse(localStorage.getItem("grades") || "{}"),
-                            monthlyGrades: JSON.parse(localStorage.getItem("monthlyGrades") || "{}"),
+                            students: JSON.parse(appStorage.getItem("students") || "[]"),
+                            subjects: JSON.parse(appStorage.getItem("subjects") || "[]"),
+                            grades: JSON.parse(appStorage.getItem("grades") || "{}"),
+                            monthlyGrades: JSON.parse(appStorage.getItem("monthlyGrades") || "{}"),
                         };
-                        ['departments', 'students', 'subjects', 'grades', 'monthlyGrades'].forEach(k => localStorage.removeItem(k));
+                        ['departments', 'students', 'subjects', 'grades', 'monthlyGrades'].forEach(k => appStorage.removeItem(k));
                         migrationPerformed = true;
                     }
                 }
@@ -1738,11 +1770,11 @@
                 }
 
                 if (migrationPerformed) {
-                    localStorage.setItem("academicData", JSON.stringify(academicData));
-                    localStorage.setItem("academicYears", JSON.stringify(academicYears));
+                    appStorage.setItem("academicData", JSON.stringify(academicData));
+                    appStorage.setItem("academicYears", JSON.stringify(academicYears));
                     alert("تم تحديث بنية البيانات بنجاح.");
                 }
-                localStorage.setItem("migration_v3_complete", "true");
+                appStorage.setItem("migration_v3_complete", "true");
             }
             migrateOldData();
 
@@ -1750,15 +1782,15 @@
             if (!currentAcademicYear || !academicYears.includes(currentAcademicYear)) {
                 // إذا لم يكن هناك اختيار محفوظ، اختر السنة الأولى من القائمة أو اتركها فارغة
                 currentAcademicYear = academicYears.length > 0 ? academicYears[0] : null;
-                if (currentAcademicYear) localStorage.setItem("currentAcademicYear", currentAcademicYear);
+                if (currentAcademicYear) appStorage.setItem("currentAcademicYear", currentAcademicYear);
             }
 
 
             // معرف مستمر خاص بالجهاز للمزامنة عند استخدام بروتوكول file://
-            let cloudUserId = localStorage.getItem("cloudUserId");
+            let cloudUserId = appStorage.getItem("cloudUserId");
             if (!cloudUserId) {
                 cloudUserId = 'user_' + Date.now().toString() + '_' + Math.random().toString().slice(2, 10);
-                localStorage.setItem("cloudUserId", cloudUserId);
+                appStorage.setItem("cloudUserId", cloudUserId);
             }
 
             // البيانات الحالية بناءً على السنة المختارة
@@ -1771,7 +1803,7 @@
                 students = data.students || [];
                 subjects = data.subjects || [];
                 grades = data.grades || {};
-                institutionName = localStorage.getItem("institutionName") || "";
+                institutionName = appStorage.getItem("institutionName") || "";
                 monthlyGrades = data.monthlyGrades || {};
                 studentReports = data.studentReports || {};
                 generalObservations = data.generalObservations || ["يتحسن", "مجهود طيب", "عمل حسن", "يحتاج إلى تركيز", "يشارك", "لا يشارك"];
@@ -1792,14 +1824,14 @@
                     academicData[currentAcademicYear] = { departments, students, subjects, grades, monthlyGrades, studentReports, reportActivities, reportBehaviors, generalObservations, reportSessions, absences, reportImagesByGender, customFinalAverageLabels, globalFinalAverageLabel, scoreObservations };
                 }
                 try {
-                    localStorage.setItem("academicData", JSON.stringify(academicData));
+                    appStorage.setItem("academicData", JSON.stringify(academicData));
                 } catch (e) {
                     alert("خطأ: مساحة التخزين ممتلئة! يرجى تقليل حجم الصور أو حذف البيانات القديمة.");
                 }
-                localStorage.setItem("academicYears", JSON.stringify(academicYears));
-                localStorage.setItem("currentAcademicYear", currentAcademicYear);
-                localStorage.setItem("institutionName", institutionName);
-                localStorage.setItem("studentFields", JSON.stringify(studentFields));
+                appStorage.setItem("academicYears", JSON.stringify(academicYears));
+                appStorage.setItem("currentAcademicYear", currentAcademicYear);
+                appStorage.setItem("institutionName", institutionName);
+                appStorage.setItem("studentFields", JSON.stringify(studentFields));
 
                 // تشغيل المزامنة التلقائية عند أي تغيير في البيانات
                 autoSaveToFirebase();
@@ -1812,7 +1844,7 @@
                     students = data.students || [];
                     subjects = data.subjects || [];
                     grades = data.grades || {};
-                    institutionName = localStorage.getItem("institutionName") || "";
+                    institutionName = appStorage.getItem("institutionName") || "";
                     monthlyGrades = data.monthlyGrades || {};
                     studentReports = data.studentReports || {};
                     generalObservations = data.generalObservations || ["يتحسن", "مجهود طيب", "عمل حسن", "يحتاج إلى تركيز", "يشارك", "لا يشارك"];
@@ -2015,7 +2047,7 @@
             function setCurrentYear(year) {
                 if (!academicYears.includes(year)) return;
                 currentAcademicYear = year;
-                localStorage.setItem("currentAcademicYear", currentAcademicYear);
+                appStorage.setItem("currentAcademicYear", currentAcademicYear);
 
                 // مزامنة مع Firestore لحفظ اختيار المدير
                 saveAll();
@@ -2055,14 +2087,14 @@
             }
 
             academicYearSelect.addEventListener("change", function () {
-                localStorage.setItem("currentAcademicYear", this.value);
+                appStorage.setItem("currentAcademicYear", this.value);
                 currentAcademicYear = this.value;
                 loadDataForCurrentYear();
                 refreshUI();
             });
 
             document.getElementById('yearSelectForStudents').addEventListener('change', function () {
-                localStorage.setItem("currentAcademicYear", this.value);
+                appStorage.setItem("currentAcademicYear", this.value);
                 currentAcademicYear = this.value;
                 academicYearSelect.value = this.value;
                 loadDataForCurrentYear();
@@ -2074,7 +2106,7 @@
                 if (currentIndex > 0) {
                     const newYear = academicYears[currentIndex - 1];
                     currentAcademicYear = newYear;
-                    localStorage.setItem("currentAcademicYear", newYear);
+                    appStorage.setItem("currentAcademicYear", newYear);
                     loadDataForCurrentYear();
                     refreshUI();
                 }
@@ -2085,7 +2117,7 @@
                 if (currentIndex < academicYears.length - 1) {
                     const newYear = academicYears[currentIndex + 1];
                     currentAcademicYear = newYear;
-                    localStorage.setItem("currentAcademicYear", newYear);
+                    appStorage.setItem("currentAcademicYear", newYear);
                     loadDataForCurrentYear();
                     refreshUI();
                 }
@@ -2096,7 +2128,7 @@
 
             function renderHomeStudents() {
                 // استرجاع القسم المختار من التخزين
-                const savedDept = localStorage.getItem("selectedHomeDept");
+                const savedDept = appStorage.getItem("selectedHomeDept");
                 if (savedDept && homeDeptSelect.querySelector(`option[value="${savedDept}"]`)) {
                     homeDeptSelect.value = savedDept;
                 }
@@ -2126,7 +2158,7 @@
                 });
 
                 // استرجاع التلميذ المختار من التخزين واجعله هو المختار حتى تغييره يدويا
-                const savedStudent = localStorage.getItem("selectedHomeStudent");
+                const savedStudent = appStorage.getItem("selectedHomeStudent");
                 if (savedStudent && homeStudentSelect.querySelector(`option[value="${savedStudent}"]`)) {
                     homeStudentSelect.value = savedStudent;
                     selectHomeStudent(savedStudent);
@@ -2134,12 +2166,12 @@
             }
 
             homeDeptSelect.addEventListener("change", function () {
-                localStorage.setItem("selectedHomeDept", homeDeptSelect.value);
+                appStorage.setItem("selectedHomeDept", homeDeptSelect.value);
                 renderHomeStudents();
             });
             // عند تحميل الصفحة، إذا كان هناك تلميذ محدد، اعرض بياناته مباشرة
             homeStudentSelect.addEventListener("change", function () {
-                localStorage.setItem("selectedHomeStudent", homeStudentSelect.value);
+                appStorage.setItem("selectedHomeStudent", homeStudentSelect.value);
                 const val = homeStudentSelect.value;
                 if (!val) {
                     selectedHomeStudentId = null;
@@ -2152,12 +2184,12 @@
             });
 
             window.addEventListener('load', () => {
-                if (localStorage.getItem("selectedHomeStudent")) renderHomeStudents();
+                if (appStorage.getItem("selectedHomeStudent")) renderHomeStudents();
             });
 
             clearSelection.addEventListener("click", () => {
                 homeStudentSelect.value = "";
-                localStorage.removeItem("selectedHomeStudent");
+                appStorage.removeItem("selectedHomeStudent");
                 selectedHomeStudentId = null;
                 homeStudentInfo.textContent = "";
                 studentDisplaySection.classList.add("hidden");
@@ -2813,7 +2845,8 @@
             </style>
         </head><body>
             <div class="page">${content}</div>
-            <script>window.onload = function() { window.print(); window.close(); }<\/script>
+            <script>
+window.onload = function() { window.print(); window.close(); }<\/script>
         </body></html>
     `);
                 win.document.close();
@@ -2939,7 +2972,7 @@
 
             // دالة لتطبيق حالة قفل الصور المحفوظة
             function applyImageLockState() {
-                const isLocked = localStorage.getItem('imagesLockedState') === 'true';
+                const isLocked = appStorage.getItem('imagesLockedState') === 'true';
                 if (isLocked) {
                     sheetContainer.classList.add('images-locked');
                 } else {
@@ -2957,7 +2990,7 @@
                 sheetContainer.classList.toggle('images-locked');
                 const isLocked = sheetContainer.classList.contains('images-locked');
                 // حفظ الحالة الجديدة في الذاكرة المحلية
-                localStorage.setItem('imagesLockedState', isLocked);
+                appStorage.setItem('imagesLockedState', isLocked);
                 // تحديث شكل الزر
                 applyImageLockState();
             });
@@ -2991,7 +3024,7 @@
                 }
 
                 // استرجاع القسم المختار من التخزين واجعله هو المختار
-                const savedDeptStudents = localStorage.getItem("selectedDeptForStudents");
+                const savedDeptStudents = appStorage.getItem("selectedDeptForStudents");
                 if (savedDeptStudents) deptSelectForStudents.value = savedDeptStudents;
 
                 renderHomeStudents();
@@ -3063,7 +3096,7 @@
                 modal.classList.remove("hidden");
             }
             deptSelectForStudents.addEventListener("change", function () {
-                localStorage.setItem("selectedDeptForStudents", deptSelectForStudents.value);
+                appStorage.setItem("selectedDeptForStudents", deptSelectForStudents.value);
                 renderStudents();
             });
             studentSearch.addEventListener("input", renderStudents);
@@ -3525,7 +3558,8 @@
             </style>
         </head><body style="background: #f1f5f9;">
             ${cardContent}
-            <script>window.onload = function() { window.print(); window.close(); }<\/script>
+            <script>
+window.onload = function() { window.print(); window.close(); }<\/script>
         </body></html>
     `);
                 win.document.close();
@@ -4184,7 +4218,8 @@
                             <span>توقيع الإدارة: ...........</span>
                             <span>توقيع ولي الأمر: ...........</span>
                         </div>
-                        <script>window.onload = function() { window.print(); window.close(); }<\/script>
+                        <script>
+window.onload = function() { window.print(); window.close(); }<\/script>
                     </body></html>
                 `);
                 win.document.close();
@@ -4216,7 +4251,8 @@
                         <h2>🏆 لائحة المتفوقين: ${deptName}</h2>
                         <p style="text-align:center">الدورة: ${session} | السنة الدراسية: ${currentAcademicYear}</p>
                         ${rankingHtml}
-                        <script>window.onload = function() { window.print(); window.close(); }<\/script>
+                        <script>
+window.onload = function() { window.print(); window.close(); }<\/script>
                     </body></html>
                 `);
                 win.document.close();
@@ -4357,7 +4393,22 @@
         </script>
         <!-- تفعيل أزرار الاستيراد والتصدير -->
         <script>
-            const exportBtn = document.getElementById('exportBtn');
+
+
+
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+const exportBtn = document.getElementById('exportBtn');
             const importBtn = document.getElementById('importBtn');
 
             exportBtn.addEventListener('click', () => {
@@ -4371,12 +4422,12 @@
             window.exportAll = function() {
                 // تجميع كل البيانات من localStorage
                 const dataToExport = {
-                    academicYears: JSON.parse(localStorage.getItem("academicYears") || "[]"),
-                    academicData: JSON.parse(localStorage.getItem("academicData") || "{}"),
-                    currentAcademicYear: localStorage.getItem("currentAcademicYear"),
-                    institutionName: localStorage.getItem("institutionName") || "",
-                    studentFields: JSON.parse(localStorage.getItem("studentFields") || "null"),
-                    migration_v3_complete: localStorage.getItem("migration_v3_complete") || "false"
+                    academicYears: JSON.parse(appStorage.getItem("academicYears") || "[]"),
+                    academicData: JSON.parse(appStorage.getItem("academicData") || "{}"),
+                    currentAcademicYear: appStorage.getItem("currentAcademicYear"),
+                    institutionName: appStorage.getItem("institutionName") || "",
+                    studentFields: JSON.parse(appStorage.getItem("studentFields") || "null"),
+                    migration_v3_complete: appStorage.getItem("migration_v3_complete") || "false"
                 };
 
                 const dataStr = JSON.stringify(dataToExport, null, 2);
@@ -4393,7 +4444,7 @@
             };
 
             window.exportImages = function() {
-                const academicDataStr = localStorage.getItem("academicData");
+                const academicDataStr = appStorage.getItem("academicData");
                 if (!academicDataStr) return alert("لا توجد بيانات لتصديرها.");
                 
                 const acData = JSON.parse(academicDataStr);
@@ -4440,12 +4491,12 @@
                         }
                         if (imported.academicData && imported.academicYears) {
                             if (confirm(`هل تريد استبدال جميع بيانات النظام الحالية بالبيانات من الملف المستورد؟ سيتم حذف جميع البيانات الحالية.`)) {
-                                localStorage.setItem("academicYears", JSON.stringify(imported.academicYears));
-                                localStorage.setItem("academicData", JSON.stringify(imported.academicData));
-                                localStorage.setItem("currentAcademicYear", imported.currentAcademicYear);
-                                localStorage.setItem("institutionName", imported.institutionName || "");
-                                localStorage.setItem("studentFields", JSON.stringify(imported.studentFields || null));
-                                localStorage.setItem("migration_v3_complete", imported.migration_v3_complete || "false");
+                                appStorage.setItem("academicYears", JSON.stringify(imported.academicYears));
+                                appStorage.setItem("academicData", JSON.stringify(imported.academicData));
+                                appStorage.setItem("currentAcademicYear", imported.currentAcademicYear);
+                                appStorage.setItem("institutionName", imported.institutionName || "");
+                                appStorage.setItem("studentFields", JSON.stringify(imported.studentFields || null));
+                                appStorage.setItem("migration_v3_complete", imported.migration_v3_complete || "false");
                                 alert('تم استيراد البيانات بنجاح. سيتم إعادة تحميل الصفحة.');
                                 window.location.reload();
                             }
@@ -4474,7 +4525,7 @@
                             return;
                         }
                         
-                        const acData = JSON.parse(localStorage.getItem("academicData") || "{}");
+                        const acData = JSON.parse(appStorage.getItem("academicData") || "{}");
                         let importedCount = 0;
 
                         for (const year in imported.years) {
@@ -4497,7 +4548,7 @@
                             }
                         }
 
-                        localStorage.setItem("academicData", JSON.stringify(acData));
+                        appStorage.setItem("academicData", JSON.stringify(acData));
                         alert(`تم استيراد الصور بنجاح! تم ربط ${importedCount} صورة تلاميذ.`);
                         window.location.reload();
 
@@ -4518,3 +4569,4 @@
     </body>
 
 </html>
+
