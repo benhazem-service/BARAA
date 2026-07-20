@@ -221,6 +221,10 @@
                 font-weight: bold;
             }
         }
+        
+        #sheet.hide-images .draggable {
+            display: none !important;
+        }
     </style>
 </head>
 
@@ -279,6 +283,11 @@
                             <label class="text-sm text-gray-600 block mb-1">كلمة السر</label>
                             <input id="accPassword" type="text" placeholder="اتركه فارغاً لعدم التغيير"
                                 class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-400 text-sm">
+                        </div>
+                        <div>
+                            <label class="text-sm text-gray-600 block mb-1">اسم المؤسسة (في النتيجة)</label>
+                            <textarea id="accInstitution" rows="2" placeholder="يمكن كتابة سطرين"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-400 text-sm"></textarea>
                         </div>
                         <div>
                             <label class="text-sm text-gray-600 block mb-1">المستويات المسموح بها</label>
@@ -461,21 +470,28 @@
 
                     <!-- قسم النتيجة المدرسية الجديد -->
                     <div id="newReportCard" class="mt-4">
-                        <div class="flex justify-center items-center gap-4 mb-4 print:hidden">
+                        <div class="flex flex-wrap justify-center items-center gap-4 mb-4 print:hidden">
                             <button class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg"
                                 onclick="printNewReport()">🖨 طباعة</button>
-                        <button class="bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-lg"
+                            <button class="bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-lg"
                                 onclick="printAllLevelReports()">🖨 طباعة نتائج القسم كاملاً</button>
-                            <select id="reportSessionSelect"
-                                class="px-3 py-2 border rounded-lg bg-white focus:ring-2 focus:ring-indigo-500"></select>
-                            <label
-                                class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg cursor-pointer"
-                                for="imageInput">📷 إدراج صورة</label>
-                            <input type="file" id="imageInput" accept="image/png, image/jpeg, image/gif" class="hidden">
                             <button id="toggleLockImagesBtn"
                                 class="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg">🔒 تثبيت
                                 الصور</button>
 
+                            <div class="flex flex-col items-center gap-2">
+                                <label
+                                    class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg cursor-pointer text-center"
+                                    for="imageInput">📷 إدراج صورة</label>
+                            </div>
+                            
+                            <input type="file" id="imageInput" accept="image/png, image/jpeg, image/gif" class="hidden">
+                            
+                            <button id="toggleShowImagesBtn" onclick="toggleImagesVisibility()"
+                                class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg">👁 إخفاء الصور</button>
+                                
+                            <select id="reportSessionSelect"
+                                class="px-3 py-2 border rounded-lg bg-white focus:ring-2 focus:ring-indigo-500"></select>
                         </div>
 
                         <div class="page" id="sheet">
@@ -1112,7 +1128,14 @@ feather.replace();
             }
 
             function clearSession() {
-                appStorage.removeItem('appSession');
+                const keysToRemove = [
+                    'appSession', 'cloudUserId', 'academicData', 'academicYears', 
+                    'currentAcademicYear', 'studentFields', 'institutionName', 
+                    'migration_v3_complete', 'lastUpdated', 'selectedHomeDept', 
+                    'selectedHomeStudent', 'imagesLockedState', 'selectedDeptForStudents', 
+                    'lastSeenGlobalYear'
+                ];
+                keysToRemove.forEach(k => appStorage.removeItem(k));
             }
 
             // تهيئة نظام المصادقة عند تحميل الصفحة
@@ -1152,7 +1175,7 @@ feather.replace();
                 try {
                     // التحقق من حساب الأدمن المضمّن
                     if (phone === ADMIN_PHONE && password === ADMIN_PASS_RAW) {
-                        const session = { phone: ADMIN_PHONE, name: 'المدير', isAdmin: true, levels: [] };
+                        const session = { phone: ADMIN_PHONE, name: 'المدير', isAdmin: true, levels: [], institution: '' };
                         currentSession = session;
                         saveSession(session);
                         onLoginSuccess(session);
@@ -1176,7 +1199,8 @@ feather.replace();
                         phone: phone,
                         name: data.name || phone,
                         isAdmin: false,
-                        levels: data.levels || []
+                        levels: data.levels || [],
+                        institution: data.institution || ''
                     };
                     currentSession = session;
                     saveSession(session);
@@ -1268,6 +1292,10 @@ feather.replace();
 
                             academicData[currentAcademicYear].departments = adminDepts;
                             departments = adminDepts;
+                            
+                            // تحميل بيانات المشترك الخاصة للسنة الحالية (التلاميذ، النقط، إلخ)
+                            loadDataForCurrentYear();
+                            
                             // تحديث واجهة المستخدم
                             refreshUI();
                             renderHomeStudents();
@@ -1354,6 +1382,7 @@ feather.replace();
                 const d = doc.data();
                 document.getElementById('accountFormTitle').textContent = '✏️ تعديل الحساب';
                 document.getElementById('accName').value = d.name || '';
+                document.getElementById('accInstitution').value = d.institution || '';
                 document.getElementById('accPhone').value = phone;
                 document.getElementById('accPhone').readOnly = true;
                 document.getElementById('accPassword').value = '';
@@ -1365,6 +1394,7 @@ feather.replace();
             function cancelAccountEdit() {
                 document.getElementById('accountFormTitle').textContent = '➕ إضافة حساب جديد';
                 document.getElementById('accName').value = '';
+                document.getElementById('accInstitution').value = '';
                 document.getElementById('accPhone').value = '';
                 document.getElementById('accPhone').readOnly = false;
                 document.getElementById('accPassword').value = '';
@@ -1375,6 +1405,7 @@ feather.replace();
 
             async function saveAccount() {
                 const name     = document.getElementById('accName').value.trim();
+                const institution = document.getElementById('accInstitution').value.trim();
                 const phone    = document.getElementById('accPhone').value.trim();
                 const password = document.getElementById('accPassword').value;
                 const editing  = document.getElementById('accEditingPhone').value;
@@ -1383,7 +1414,7 @@ feather.replace();
                 if (!name || !phone) { alert('يرجى إدخال الاسم ورقم الهاتف.'); return; }
                 if (!editing && !password) { alert('يرجى إدخال كلمة السر للحساب الجديد.'); return; }
 
-                const accData = { name, levels: selectedLevels };
+                const accData = { name, institution, levels: selectedLevels };
                 if (password) accData.passwordHash = simpleHash(password);
 
                 try {
@@ -1447,15 +1478,15 @@ feather.replace();
                         if (data.lastUpdatedBy === instanceId) return;
 
                         const localLastUpdated = appStorage.getItem("lastUpdated");
-                        if (localLastUpdated && data.lastUpdated && new Date(localLastUpdated) >= new Date(data.lastUpdated)) {
-                            console.log("Local data is newer than cloud data. Pushing to cloud instead of syncing.");
+                        // فقط إذا كانت البيانات المحلية أحدث بشكل صريح، ندفعها للسحابة
+                        // إذا كانت السحابة أحدث أو متساوية من جهاز آخر، نطبقها فوراً
+                        if (localLastUpdated && data.lastUpdated && new Date(localLastUpdated) > new Date(data.lastUpdated)) {
+                            console.log("Local is strictly newer. Pushing to cloud.");
                             saveToFirebase();
                             return;
                         }
-
-                        console.log("Syncing Firestore data...");
+                        console.log("Syncing Firestore data from remote device...");
                         syncLocalData(data);
-                        updateCloudStatus('synced-remote');
                     } else {
                         // If no Firestore data, try migrating from old RTDB backup
                         migrateFromRTDB(docId);
@@ -1567,16 +1598,58 @@ feather.replace();
             }
 
             function syncLocalData(data) {
-                if (data.academicData) appStorage.setItem("academicData", JSON.stringify(data.academicData));
-                if (data.academicYears) appStorage.setItem("academicYears", JSON.stringify(data.academicYears));
-                if (data.studentFields) appStorage.setItem("studentFields", JSON.stringify(data.studentFields));
-                if (data.currentAcademicYear) appStorage.setItem("currentAcademicYear", data.currentAcademicYear);
-                if (data.institutionName) appStorage.setItem("institutionName", data.institutionName);
-
-                // Reload if current page state is significantly different (simplest approach)
-                // Or just refresh UI components
-                loadDataForCurrentYear();
-                refreshUI();
+                if (data.academicData) { 
+                    // استرجاع الصور المحفوظة محلياً لأنها تُحذف عند الرفع للسحابة لتوفير المساحة
+                    if (academicData) {
+                        for (const year in data.academicData) {
+                            if (academicData[year]) {
+                                if (academicData[year].reportImagesByGender) {
+                                    data.academicData[year].reportImagesByGender = academicData[year].reportImagesByGender;
+                                }
+                                if (data.academicData[year].students && academicData[year].students) {
+                                    data.academicData[year].students.forEach(incomingStudent => {
+                                        const localStudent = academicData[year].students.find(s => s.id === incomingStudent.id);
+                                        if (localStudent && localStudent.photo) {
+                                            incomingStudent.photo = localStudent.photo;
+                                        }
+                                        if (localStudent && localStudent.info && localStudent.info['الصورة']) {
+                                            if (!incomingStudent.info) incomingStudent.info = {};
+                                            incomingStudent.info['الصورة'] = localStudent.info['الصورة'];
+                                        }
+                                    });
+                                }
+                                if (data.academicData[year].studentReports && academicData[year].studentReports) {
+                                    for (const sid in data.academicData[year].studentReports) {
+                                        if (academicData[year].studentReports[sid] && academicData[year].studentReports[sid].photo) {
+                                            data.academicData[year].studentReports[sid].photo = academicData[year].studentReports[sid].photo;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    appStorage.setItem("academicData", JSON.stringify(data.academicData)); 
+                    academicData = data.academicData; 
+                }
+                
+                if (currentSession && !currentSession.isAdmin) {
+                    // حساب فرعي: لا نحدث السنوات الدراسية ولا الحقول من هنا بل من بيانات المدير
+                } else {
+                    if (data.academicYears) { appStorage.setItem("academicYears", JSON.stringify(data.academicYears)); academicYears = data.academicYears; }
+                    if (data.currentAcademicYear) { appStorage.setItem("currentAcademicYear", data.currentAcademicYear); currentAcademicYear = data.currentAcademicYear; }
+                    if (data.studentFields) { appStorage.setItem("studentFields", JSON.stringify(data.studentFields)); studentFields = data.studentFields; }
+                }
+                
+                if (data.institutionName) { appStorage.setItem("institutionName", data.institutionName); institutionName = data.institutionName; }
+                if (data.lastUpdated) appStorage.setItem("lastUpdated", data.lastUpdated);
+                
+                loadDataForCurrentYear(); 
+                
+                if (currentSession && !currentSession.isAdmin) {
+                    loadAdminSharedData();
+                } else {
+                    refreshUI(); 
+                }
                 updateCloudStatus('synced-remote');
             }
 
@@ -1771,6 +1844,7 @@ feather.replace();
 
                 if (!studentFields) {
                     studentFields = ["الاسم الكامل (بالعربية)", "Nom et Prénom (en Français)", "الجنس", "تاريخ الازدياد", "مكان الازدياد", "هاتف ولي الأمر"];
+                    appStorage.setItem("studentFields", JSON.stringify(studentFields));
                     migrationPerformed = true;
                 }
 
@@ -1845,7 +1919,11 @@ feather.replace();
             const loadDataForCurrentYear = () => {
                 if (currentAcademicYear && academicData[currentAcademicYear]) {
                     const data = academicData[currentAcademicYear];
-                    departments = data.departments || [];
+                    if (currentSession && !currentSession.isAdmin) {
+                        // للمشترك الفرعي: نترك الأقسام كما حمّلها loadAdminSharedData
+                    } else {
+                        departments = data.departments || [];
+                    }
                     students = data.students || [];
                     subjects = data.subjects || [];
                     grades = data.grades || {};
@@ -2156,7 +2234,7 @@ feather.replace();
                     homeStudentCount.textContent = "";
                     return;
                 }
-                const filtered = students.filter(s => s.deptId == deptId);
+                const filtered = students.filter(s => s.deptId == deptId && !s.isDroppedOut);
                 homeStudentCount.textContent = `عدد التلاميذ في القسم: ${filtered.length}`;
                 filtered.forEach(s => {
                     homeStudentSelect.appendChild(new Option(s.info['الاسم الكامل (بالعربية)'], s.id));
@@ -2262,7 +2340,7 @@ feather.replace();
 
                 // تعبئة الحقول
                 const institutionField = document.querySelector('#sheet [data-field="institution"]');
-                const institutionValue = institutionName || ''; // استخدام اسم المؤسسة من الإعدادات العامة فقط
+                const institutionValue = (currentSession && currentSession.institution) ? currentSession.institution : (institutionName || '');
                 institutionField.innerHTML = institutionValue.replace(/\n/g, '<br>'); // تحويل الأسطر الجديدة إلى <br>
 
                 document.querySelector('#sheet [data-field="level"]').textContent = dept?.name || '';
@@ -2947,13 +3025,21 @@ window.onload = function() { window.print(); window.close(); }<\/script>
                 document.addEventListener("mousemove", e => {
                     if (isDragging) {
                         const rect = page.getBoundingClientRect();
-                        imgWrapper.style.left = e.clientX - rect.left - offsetX + "px";
-                        imgWrapper.style.top = e.clientY - rect.top - offsetY + "px";
+                        let leftPx = e.clientX - rect.left - offsetX;
+                        let topPx = e.clientY - rect.top - offsetY;
+                        
+                        imgWrapper.style.left = (leftPx / rect.width * 100) + "%";
+                        imgWrapper.style.top = (topPx / rect.height * 100) + "%";
                     } else if (isResizing) {
+                        const rect = page.getBoundingClientRect();
                         const dx = e.clientX - startX;
                         const dy = e.clientY - startY;
-                        imgWrapper.style.width = startWidth + dx + "px";
-                        imgWrapper.style.height = startHeight + dy + "px";
+                        
+                        let newWidthPx = startWidth + dx;
+                        let newHeightPx = startHeight + dy;
+                        
+                        imgWrapper.style.width = (newWidthPx / rect.width * 100) + "%";
+                        imgWrapper.style.height = (newHeightPx / rect.height * 100) + "%";
                     }
                 });
 
@@ -2999,6 +3085,29 @@ window.onload = function() { window.print(); window.close(); }<\/script>
                 // تحديث شكل الزر
                 applyImageLockState();
             });
+            // وظائف معاينة الصور وإخفائها
+            let imagesVisible = true;
+            function toggleImagesVisibility() {
+                imagesVisible = !imagesVisible;
+                const sheet = document.getElementById('sheet');
+                const btn = document.getElementById('toggleShowImagesBtn');
+                if (imagesVisible) {
+                    sheet.classList.remove('hide-images');
+                    if(btn) {
+                        btn.innerHTML = '👁 إخفاء الصور';
+                        btn.classList.replace('bg-gray-400', 'bg-gray-500');
+                        btn.classList.replace('hover:bg-gray-500', 'hover:bg-gray-600');
+                    }
+                } else {
+                    sheet.classList.add('hide-images');
+                    if(btn) {
+                        btn.innerHTML = '👁 إظهار الصور';
+                        btn.classList.replace('bg-gray-500', 'bg-gray-400');
+                        btn.classList.replace('hover:bg-gray-600', 'hover:bg-gray-500');
+                    }
+                }
+            }
+
 
             // ----- الأقسام -----
             function renderDepartments() {
@@ -3074,7 +3183,13 @@ window.onload = function() { window.print(); window.close(); }<\/script>
                 filtered.forEach(s => {
                     const li = document.createElement("li");
                     li.className = "flex justify-between items-center bg-gray-50 p-3 rounded-lg";
-                    li.innerHTML = `<span>👤 ${s.info['الاسم الكامل (بالعربية)'] || 'اسم غير محدد'}</span>
+                    const isDropped = s.isDroppedOut ? "checked" : "";
+                    li.innerHTML = `<div class="flex items-center gap-3">
+        <span>👤 ${s.info['الاسم الكامل (بالعربية)'] || 'اسم غير محدد'}</span>
+        <label class="flex items-center gap-1 text-sm text-red-600 font-bold cursor-pointer bg-red-50 px-2 py-1 rounded border border-red-200" title="تحديد التلميذ كمنقطع عن الدراسة لإخفائه من النتائج">
+            <input type="checkbox" onchange="toggleDropout(${s.id}, this.checked)" ${isDropped}> منقطع
+        </label>
+      </div>
       <div class="flex gap-2">
         <button class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-sm transition-btn" onclick="editStudent(${s.id})">تعديل</button>
         <button class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm transition-btn" onclick="deleteStudent(${s.id})">حذف</button>
@@ -3099,6 +3214,15 @@ window.onload = function() { window.print(); window.close(); }<\/script>
                     saveAll(); renderStudents();
                 };
                 modal.classList.remove("hidden");
+            }
+            
+            function toggleDropout(id, checked) {
+                const s = students.find(x => String(x.id) == String(id));
+                if (s) {
+                    s.isDroppedOut = checked;
+                    saveAll();
+                    renderHomeStudents();
+                }
             }
             deptSelectForStudents.addEventListener("change", function () {
                 appStorage.setItem("selectedDeptForStudents", deptSelectForStudents.value);
@@ -3139,13 +3263,46 @@ window.onload = function() { window.print(); window.close(); }<\/script>
                     return;
                 }
 
+                // تجميع التلاميذ حسب القسم
+                const groupedStudents = {};
                 filteredStudents.forEach(student => {
-                    const li = document.createElement('li');
-                    li.className = 'p-3 bg-gray-50 hover:bg-green-50 rounded-lg cursor-pointer flex justify-between items-center';
-                    li.innerHTML = `<span><strong>${student.info['الاسم الكامل (بالعربية)']}</strong> <span class="text-sm text-gray-600">- ${deptsMap.get(student.deptId) || 'قسم غير محدد'}</span></span>`;
-                    li.onclick = () => openStudentModal(student.id);
-                    allStudentsList.appendChild(li);
+                    const deptId = student.deptId || 'unknown';
+                    if (!groupedStudents[deptId]) {
+                        groupedStudents[deptId] = [];
+                    }
+                    groupedStudents[deptId].push(student);
                 });
+
+                function renderGroup(title, deptStudents, isUnknown = false) {
+                    const headerLi = document.createElement('li');
+                    const headerBg = isUnknown ? 'bg-gray-200' : 'bg-indigo-100';
+                    const headerText = isUnknown ? 'text-gray-800' : 'text-indigo-800';
+                    headerLi.className = `p-2 ${headerBg} ${headerText} font-bold rounded-lg mt-3 mb-1 text-sm`;
+                    headerLi.textContent = `📚 ${title} (${deptStudents.length})`;
+                    allStudentsList.appendChild(headerLi);
+
+                    const borderCol = isUnknown ? 'border-gray-300' : 'border-indigo-300';
+                    deptStudents.forEach(student => {
+                        const li = document.createElement('li');
+                        li.className = `p-3 bg-gray-50 hover:bg-green-50 rounded-lg cursor-pointer flex justify-between items-center mr-2 border-r-4 ${borderCol}`;
+                        li.innerHTML = `<span><strong>${student.info['الاسم الكامل (بالعربية)']}</strong></span>`;
+                        li.onclick = () => openStudentModal(student.id);
+                        allStudentsList.appendChild(li);
+                    });
+                }
+
+                // الأقسام الموجودة حاليا (للحفاظ على الترتيب)
+                departments.forEach(dept => {
+                    if (groupedStudents[dept.id]) {
+                        renderGroup(dept.name, groupedStudents[dept.id], false);
+                        delete groupedStudents[dept.id];
+                    }
+                });
+
+                // الأقسام المحذوفة أو غير المحددة
+                for (const deptId in groupedStudents) {
+                    renderGroup(deptsMap.get(deptId) || 'قسم غير محدد', groupedStudents[deptId], true);
+                }
             }
 
             // --- منطق بطاقة التلميذ ---
@@ -3329,6 +3486,9 @@ window.onload = function() { window.print(); window.close(); }<\/script>
                 }
 
                 const studentInfo = studentId ? (students.find(s => String(s.id) === String(studentId))?.info || {}) : {};
+                if (!studentFields) {
+                    studentFields = ["الاسم الكامل (بالعربية)", "Nom et Prénom (en Français)", "الجنس", "تاريخ الازدياد", "مكان الازدياد", "هاتف ولي الأمر"];
+                }
                 studentFields.forEach(field => {
                     studentFieldsContainer.appendChild(createFieldInput(field, studentInfo[field] || ''));
                 });
@@ -3352,6 +3512,7 @@ window.onload = function() { window.print(); window.close(); }<\/script>
                         return alert("هذه الخانة موجودة بالفعل.");
                     }
                     studentFields.push(trimmedName);
+                    saveAll();
                     openStudentModal(studentIdInput.value); // إعادة فتح المودال لإظهار الحقل الجديد
                 }
             };
@@ -3381,7 +3542,15 @@ window.onload = function() { window.print(); window.close(); }<\/script>
             studentDetailForm.addEventListener('submit', (e) => {
                 e.preventDefault();
                 const studentId = studentIdInput.value;
-                const deptId = deptSelectForStudents.value;
+                
+                let deptId = deptSelectForStudents.value;
+                if (studentId) {
+                    const existingStudent = students.find(s => String(s.id) === String(studentId));
+                    if (existingStudent) {
+                        deptId = existingStudent.deptId;
+                    }
+                }
+
                 if (!deptId) return alert('الرجاء اختيار قسم أولاً.');
 
                 const newInfo = {};
@@ -3413,7 +3582,7 @@ window.onload = function() { window.print(); window.close(); }<\/script>
                 if (studentId) { // تحديث
                     const student = students.find(s => String(s.id) === String(studentId));
                     student.info = newInfo;
-                    student.deptId = deptId; // السماح بتغيير القسم
+                    student.deptId = deptId; // سيحتفظ التلميذ بقسمه الأصلي
                 } else { // إضافة
                     students.push({ id: String(Date.now()), deptId, info: newInfo });
                 }
@@ -3523,6 +3692,9 @@ window.onload = function() { window.print(); window.close(); }<\/script>
                 const studentInfo = student.info || {};
 
                 let fieldsHTML = '';
+                if (!studentFields) {
+                    studentFields = ["الاسم الكامل (بالعربية)", "Nom et Prénom (en Français)", "الجنس", "تاريخ الازدياد", "مكان الازدياد", "هاتف ولي الأمر"];
+                }
                 studentFields.forEach(field => {
                     if (field !== 'صورة') { // لا نطبع رابط الصورة كنص
                         fieldsHTML += `<p style="margin: 8px 0; border-bottom: 1px solid #eee; padding-bottom: 8px;"><strong>${field}:</strong> ${studentInfo[field] || '-'}</p>`;
@@ -4044,7 +4216,7 @@ window.onload = function() { window.print(); window.close(); }<\/script>
                     return;
                 }
 
-                const deptStudents = students.filter(s => s.deptId == deptId);
+                const deptStudents = students.filter(s => s.deptId == deptId && !s.isDroppedOut);
                 const rankedList = deptStudents.map(s => {
                     const avg = parseFloat(studentReports[s.id]?.[session]?.behaviorAverage) || 0;
                     return { name: s.info['الاسم الكامل (بالعربية)'], avg: avg };
@@ -4082,7 +4254,7 @@ window.onload = function() { window.print(); window.close(); }<\/script>
                     return;
                 }
 
-                const deptStudents = students.filter(s => s.deptId == deptId);
+                const deptStudents = students.filter(s => s.deptId == deptId && !s.isDroppedOut);
                 if (deptStudents.length === 0) {
                     list.innerHTML = '<p class="text-center text-gray-500">لا يوجد تلاميذ في هذا القسم.</p>';
                     return;
@@ -4158,7 +4330,7 @@ window.onload = function() { window.print(); window.close(); }<\/script>
                     return;
                 }
 
-                const deptStudents = students.filter(s => s.deptId == deptId);
+                const deptStudents = students.filter(s => s.deptId == deptId && !s.isDroppedOut);
                 if (deptStudents.length === 0) {
                     list.innerHTML = '<p class="text-center text-gray-500">لا يوجد تلاميذ في هذا القسم.</p>';
                     return;
@@ -4210,7 +4382,7 @@ window.onload = function() { window.print(); window.close(); }<\/script>
                         </style>
                     </head><body>
                         <div class="header">
-                            <h2>${institutionName || 'المؤسسة التعليمية'}</h2>
+                            <h2>${(currentSession && currentSession.institution) ? currentSession.institution.replace(/\n/g, '<br>') : (institutionName || 'المؤسسة التعليمية')}</h2>
                             <p>وصل استلام مبلغ شهري</p>
                         </div>
                         <div class="info"><strong>التلميذ(ة):</strong> ${student.info['الاسم الكامل (بالعربية)']}</div>
@@ -4252,7 +4424,7 @@ window.onload = function() { window.print(); window.close(); }<\/script>
                             th { background-color: #fef3c7; }
                         </style>
                     </head><body>
-                        <div style="text-align:center">${institutionName || ''}</div>
+                        <div style="text-align:center">${(currentSession && currentSession.institution) ? currentSession.institution.replace(/\n/g, '<br>') : (institutionName || '')}</div>
                         <h2>🏆 لائحة المتفوقين: ${deptName}</h2>
                         <p style="text-align:center">الدورة: ${session} | السنة الدراسية: ${currentAcademicYear}</p>
                         ${rankingHtml}
@@ -4425,6 +4597,11 @@ const exportBtn = document.getElementById('exportBtn');
             });
 
             window.exportAll = function() {
+                // حفظ أي تعديلات غير محفوظة قبل التصدير
+                if (typeof saveAll === 'function') {
+                    saveAll();
+                }
+
                 // تجميع كل البيانات من localStorage
                 const dataToExport = {
                     academicYears: JSON.parse(appStorage.getItem("academicYears") || "[]"),
@@ -4487,7 +4664,7 @@ const exportBtn = document.getElementById('exportBtn');
                 const file = e.target.files[0];
                 if (!file) return;
                 const reader = new FileReader();
-                reader.onload = (event) => {
+                reader.onload = async (event) => {
                     try {
                         const imported = JSON.parse(event.target.result);
                         if (imported.type === 'images_only') {
@@ -4502,6 +4679,67 @@ const exportBtn = document.getElementById('exportBtn');
                                 appStorage.setItem("institutionName", imported.institutionName || "");
                                 appStorage.setItem("studentFields", JSON.stringify(imported.studentFields || null));
                                 appStorage.setItem("migration_v3_complete", imported.migration_v3_complete || "false");
+                                
+                                // تعيين المتغيرات العامة ليقوم حفظ السحابة باستخدامها
+                                academicData = imported.academicData || {};
+                                academicYears = imported.academicYears || [];
+                                currentAcademicYear = imported.currentAcademicYear || "";
+                                institutionName = imported.institutionName || "";
+                                studentFields = imported.studentFields || null;
+
+                                // مزامنة البيانات فورا مع السحابة قبل إعادة التحميل لمنع مسحها
+                                if (typeof fs !== 'undefined' && typeof cloudUserId !== 'undefined' && cloudUserId) {
+                                    try {
+                                        updateCloudStatus('saving');
+                                        
+                                        // دالة تجريد الصور لأن حجمها كبير
+                                        const strippedAcademicData = JSON.parse(JSON.stringify(academicData));
+                                        for (const year in strippedAcademicData) {
+                                            strippedAcademicData[year].reportImagesByGender = { 'ذكر': [], 'أنثى': [] };
+                                            if (strippedAcademicData[year].studentReports) {
+                                                for (const sid in strippedAcademicData[year].studentReports) {
+                                                    if (strippedAcademicData[year].studentReports[sid].photo) {
+                                                        delete strippedAcademicData[year].studentReports[sid].photo;
+                                                    }
+                                                }
+                                            }
+                                            if (strippedAcademicData[year].students) {
+                                                strippedAcademicData[year].students.forEach(s => {
+                                                    if (s.photo) delete s.photo;
+                                                    if (s.info && s.info['الصورة']) delete s.info['الصورة'];
+                                                });
+                                            }
+                                        }
+
+                                        const newLastUpdated = new Date().toISOString();
+                                        const dataToSave = {
+                                            academicData: strippedAcademicData,
+                                            academicYears: academicYears,
+                                            currentAcademicYear: currentAcademicYear,
+                                            institutionName: institutionName,
+                                            studentFields: studentFields,
+                                            lastUpdated: newLastUpdated,
+                                            lastUpdatedBy: typeof instanceId !== 'undefined' ? instanceId : 'import'
+                                        };
+
+                                        // تحديث الوقت محلياً لكي لا تقوم السحابة بالكتابة فوقه بعد التحديث
+                                        appStorage.setItem("lastUpdated", newLastUpdated);
+
+                                        // الكتابة فوق بيانات السحابة بشكل كامل بالبيانات المستوردة
+                                        await fs.collection("users").doc(cloudUserId).set(dataToSave);
+                                        // النسخ الاحتياطي في Realtime DB
+                                        if (typeof db !== 'undefined') {
+                                            db.ref('backup/' + cloudUserId).set(dataToSave).catch(e => console.error(e));
+                                        }
+                                        console.log("تم الرفع للسحابة بنجاح");
+                                    } catch (err) {
+                                        console.error("خطأ أثناء مزامنة الاستيراد مع السحابة", err);
+                                        alert("تحذير: تم الاستيراد محلياً ولكن فشل الرفع للسحابة (السبب: " + err.message + ")");
+                                    }
+                                } else {
+                                    appStorage.setItem("lastUpdated", new Date().toISOString());
+                                }
+
                                 alert('تم استيراد البيانات بنجاح. سيتم إعادة تحميل الصفحة.');
                                 window.location.reload();
                             }
